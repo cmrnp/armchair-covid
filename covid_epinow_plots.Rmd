@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   comment = NA,
   fig.width = 7,
   fig.height = 6,
-  dpi = 160,
+  dpi = 200,
   fig.retina = 2,
   dev = "ragg_png"
 )
@@ -33,6 +33,20 @@ library(broom)
 library(EpiNow2)
 ```
 
+```{r}
+theme_set(
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off",
+        plot.title = element_text(size = rel(1.0)),
+        plot.caption = element_text(size = rel(7/11)),
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = rel(1)),
+        axis.text = element_text(colour = "black", size = rel(1)),
+        axis.title = element_text(size = rel(1)))
+)
+```
 
 ## Data import
 
@@ -54,6 +68,10 @@ covid19_aus_munged %>%
   arrange(state) %>%
   select(state, date, daily_confirmed) %>%
   gt()
+```
+
+```{r}
+fs::dir_create(glue("plots/{Sys.Date()}"))
 ```
 
 ### EpiNow2 estimates
@@ -146,18 +164,16 @@ pred_int %>%
   geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
-  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, stroke = 1, alpha = 0.8) +
+  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   expand_limits(y = 0) +
   facet_wrap(~state_full, scale = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
   scale_x_date(date_labels = "%e %b") +
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        plot.title.position = "plot",
-        legend.position = "off") +
-  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+  labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "GAM model for Covid cases in selected Australian states and New Zealand",
-       caption = glue("Estimated using a negative binomial Generalised Additive Model, using the mgcv R package.\nData from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% parametric bootstrap prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(covid19_aus_munged$date)}. Contact: twitter.com/camjpatrick"))
+       caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the mgcv R package.\nBands are 20%, 50%, 90% parametric bootstrap prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
+# ggsave(glue("plots/{Sys.Date()}/cases_gam_mgcv.png"),
+#        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ### brms (Bayesian)
@@ -241,13 +257,9 @@ pred_int_brm %>%
   facet_wrap(~state_full, scale = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
   scale_x_date(date_labels = "%e %b") +
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        plot.title.position = "plot",
-        legend.position = "off") +
-  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+  labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "Bayesian GAM for Covid cases in selected Australian states and New Zealand",
-       caption = glue("Estimated using a negative binomial Generalised Additive Model, using the brms R package.\nData from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(covid19_aus_munged$date)}. Contact: twitter.com/camjpatrick"))
+       caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the brms R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
 ```
 
 
@@ -280,35 +292,26 @@ est_cases %>%
   scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
   scale_colour_manual(values = c("chartreuse4", "goldenrod4", "firebrick4")) +
   scale_x_date(date_labels = "%e %b") +
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        plot.title.position = "plot",
-        legend.position = "off") +
-  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+  labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "EpiNow2 model for Covid cases in selected Australian states and New Zealand",
-       caption = glue("Estimated using EpiNow2 R package using data from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(case_data$date)}. Contact: twitter.com/camjpatrick"))
+       caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
 ```
 
 ```{r epinow-reff}
 est_R %>%
-  filter(date >= ymd("2021-08-01")) %>%
+  filter(date >= ymd("2021-08-01"), type != "forecast") %>%
   ggplot(aes(x = date, fill = type, group = type)) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
-  geom_vline(xintercept = max(case_data$date), linetype = "dashed", colour = "grey50") +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6) +
   facet_wrap(~state_full) +
-  scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
+  scale_fill_manual(values = c("chartreuse3", "goldenrod3")) +
   scale_x_date(date_labels = "%e %b") +
   scale_y_log10(breaks = c(1/8, 1/4, 1/2, 1, 2, 4, 8)) +
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        plot.title.position = "plot",
-        legend.position = "off") +
-  labs(x = "Notification date", y = "Estimated effective reproduction number (Reff)",
+  labs(x = NULL, y = "Estimated effective reproduction number (Reff)",
        title = "Estimated Reff in selected Australian states and New Zealand",
-       caption = glue("Estimated using EpiNow2 R package. Data from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior credible intervals.\nPlot created {Sys.Date()} with most recent cases from {max(case_data$date)}. Contact: twitter.com/camjpatrick"))
+       caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior credible intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
 ```
 
 
