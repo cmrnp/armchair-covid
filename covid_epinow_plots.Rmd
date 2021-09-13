@@ -1,0 +1,323 @@
+---
+title: "Tracking plots for Australia / New Zealand 2021 Covid outbreak"
+author: "Cameron Patrick"
+date: "September 2021"
+output: 
+  html_document:
+    toc: true
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  comment = NA,
+  fig.width = 7,
+  fig.height = 6,
+  dpi = 160,
+  fig.retina = 2,
+  dev = "ragg_png"
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(gt)
+library(mgcv)
+library(brms)
+library(broom)
+library(EpiNow2)
+```
+
+
+## Data import
+
+### Raw case numbers
+
+```{r load-data}
+data_file <- last(sort(Sys.glob("covid19_aus_munged_*.Rds")))
+cat("Latest data file:", data_file, "\n")
+covid19_aus_munged <- readRDS(data_file)
+```
+
+Most recent observations for each state/NZ:
+
+```{r show-last-cases}
+covid19_aus_munged %>%
+  group_by(state) %>%
+  filter(date == max(date)) %>%
+  ungroup() %>%
+  arrange(state) %>%
+  select(state, date, daily_confirmed) %>%
+  gt()
+```
+
+### EpiNow2 estimates
+
+```{r load-epinow-data}
+data_file <- last(sort(Sys.glob("estimates_aus_*.Rds")))
+cat("Latest data file:", data_file, "\n")
+estimates_aus <- readRDS(data_file)
+```
+
+Most recent observations for each state/NZ:
+
+```{r}
+case_data <- estimates_aus %>%
+  select(state, state_full, data) %>%
+  unnest(data) %>%
+  ungroup()
+```
+
+```{r show-last-cases-epinow}
+case_data %>%
+  group_by(state) %>%
+  filter(date == max(date)) %>%
+  ungroup() %>%
+  select(state, date, daily_confirmed = confirm) %>%
+  gt()
+```
+
+## GAM for smoothing and crude prediction
+
+### mgcv (frequentist)
+
+```{r}
+state_gams <- covid19_aus_munged %>%
+  filter(date >= outbreak_date) %>%
+  mutate(date_numeric = as.numeric(date - outbreak_date)) %>%
+  nest_by(state, state_full) %>%
+  mutate(model = list(
+    gam(daily_confirmed ~ s(date_numeric, bs = "tp", k = 20),
+        data = data,
+        family = nb)))
+
+extrap_days <- 7
+n_boot <- 10000
+
+pred_int <- state_gams %>%
+  mutate(theta = model$family$getTheta()) %>%
+  rowwise(state, state_full, theta) %>%
+  summarise(
+    full_join(
+      data,
+      augment(model,
+              newdata = tibble(date_numeric = 0:(max(data$date_numeric) + extrap_days),
+                               is_extrap = date_numeric > max(data$date_numeric)),
+              type.predict = "link"),
+      by = "date_numeric"
+    )
+  ) %>%
+  ungroup() %>%
+  rowwise(everything()) %>%
+  summarise(mu = rnorm(n_boot, mean = .fitted, sd = .se.fit)) %>%
+  ungroup() %>%
+  mutate(cases = MASS::rnegbin(n(), exp(mu), exp(theta))) %>%
+  group_by(state, state_full, date_numeric) %>%
+  summarise(outbreak_date = first(outbreak_date),
+            is_extrap = first(is_extrap),
+            daily_confirmed = first(daily_confirmed),
+            mu = exp(first(.fitted)),
+            mean = mean(cases), sd = sd(cases),
+            median = median(cases),
+            lower95 = quantile(cases, 0.025),
+            lower90 = quantile(cases, 0.05),
+            lower50 = quantile(cases, 0.25),
+            lower20 = quantile(cases, 0.4),
+            upper95 = quantile(cases, 0.975),
+            upper90 = quantile(cases, 0.95),
+            upper50 = quantile(cases, 0.75),
+            upper20 = quantile(cases, 0.6)) %>%
+  ungroup() %>%
+  group_by(state, state_full) %>%
+  fill(outbreak_date) %>%
+  ungroup() %>%
+  mutate(date = outbreak_date + date_numeric)
+```
+
+```{r mgcv-cases}
+pred_int %>%
+  filter(date >= "2021-08-01") %>%
+  ggplot(aes(x = date, group = is_extrap, fill = is_extrap)) +
+  geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
+  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, stroke = 1, alpha = 0.8) +
+  expand_limits(y = 0) +
+  facet_wrap(~state_full, scale = "free_y") +
+  scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
+  scale_x_date(date_labels = "%e %b") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off") +
+  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+       title = "GAM model for Covid cases in selected Australian states and New Zealand",
+       caption = glue("Estimated using a negative binomial Generalised Additive Model, using the mgcv R package.\nData from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% parametric bootstrap prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(covid19_aus_munged$date)}. Contact: twitter.com/camjpatrick"))
+```
+
+### brms (Bayesian)
+
+```{r,  include = FALSE}
+brm_fit_empty <-
+  brm(
+    formula = daily_confirmed ~ s(date_numeric, bs = "tp", k = 20),
+    data = tibble(date_numeric = 0:50, daily_confirmed = 0:50),
+    family = negbinomial(link = "log", link_shape = "log"),
+    prior = c(prior(normal(log_mean, log_mean), class = Intercept),
+              prior(normal(0, 10*log_sd), class = b),
+              prior(normal(0, 10*log_sd), class = sds),
+              prior(gamma(0.01, 0.01), class = shape)),
+    stanvars = c(stanvar(3, "log_mean"),
+                 stanvar(1, "log_sd")),
+    backend = "cmdstanr",
+    chains = 1,
+    iter = 100
+  )
+
+state_brm_gams <- covid19_aus_munged %>%
+  filter(date >= outbreak_date) %>%
+  mutate(date_numeric = as.numeric(date - outbreak_date)) %>%
+  nest_by(state, state_full) %>%
+  mutate(log_mean = mean(log(data$daily_confirmed + 0.5), na.rm = TRUE),
+         log_sd = sd(log(data$daily_confirmed + 0.5), na.rm = TRUE),
+         model = list(update(brm_fit_empty, 
+                             recompile = FALSE,
+                             newdata = data,
+                             stanvars = c(stanvar(log_mean, "log_mean"),
+                                          stanvar(log_sd, "log_sd")),
+                             chains = 4,
+                             iter = 2000,
+                             warmup = 500,
+                             cores = 4)))
+```
+
+
+```{r}
+augment_brm_predict <- function(model, newdata, ...) {
+  p <- predict(object = model, newdata = newdata, ...)
+  bind_cols(newdata, as_tibble(p))
+}
+```
+
+
+```{r}
+pred_int_brm <- state_brm_gams %>%
+  rowwise(state, state_full) %>%
+  summarise(
+    augment_brm_predict(
+      model,
+      newdata = tibble(date_numeric = 0:(max(data$date_numeric) + extrap_days),
+                       is_extrap = date_numeric > max(data$date_numeric),
+                       outbreak_date = first(data$outbreak_date)),
+      probs = c(0.05, 0.25, 0.4, 0.6, 0.75, 0.95)
+    ) %>%
+      full_join(select(data, date_numeric, daily_confirmed), by = "date_numeric")
+  ) %>%
+  ungroup() %>%
+  rename(mu = Estimate, sd = Est.Error,
+         lower90 = Q5,
+         lower50 = Q25,
+         lower20 = Q40,
+         upper20 = Q60,
+         upper50 = Q75,
+         upper90 = Q95) %>%
+  mutate(date = outbreak_date + date_numeric)
+```
+
+```{r brm-cases}
+pred_int_brm %>%
+  filter(date >= "2021-08-01") %>%
+  ggplot(aes(x = date, group = is_extrap, fill = is_extrap)) +
+  geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
+  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, stroke = 1, alpha = 0.8) +
+  expand_limits(y = 0) +
+  facet_wrap(~state_full, scale = "free_y") +
+  scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
+  scale_x_date(date_labels = "%e %b") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off") +
+  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+       title = "Bayesian GAM for Covid cases in selected Australian states and New Zealand",
+       caption = glue("Estimated using a negative binomial Generalised Additive Model, using the brms R package.\nData from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(covid19_aus_munged$date)}. Contact: twitter.com/camjpatrick"))
+```
+
+
+## EpiNow summaries
+
+```{r epinow-summaries}
+walk2(estimates_aus$state, estimates_aus$model,
+      ~{cat("Summary for", as.character(.x), "\n"); print(summary(.y)); cat("\n\n")})
+```
+
+## Plot EpiNow estimates
+
+```{r}
+est_cases <- estimates_aus %>%
+  summarise(filter(model$estimates$summarised, variable == "reported_cases")) %>%
+  left_join(case_data, by = c("state", "state_full", "date"))
+est_R <- estimates_aus %>%
+  summarise(filter(model$estimates$summarised, variable == "R"))
+```
+
+```{r epinow-cases}
+est_cases %>%
+  filter(date >= ymd("2021-08-01")) %>%
+  ggplot(aes(x = date, colour = type, fill = type, group = type)) +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3, colour = NA) +
+  geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3, colour = NA) +
+  geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6, colour = NA) +
+  geom_point(aes(y = confirm), pch = 1, stroke = 1, alpha = 0.8) +
+  facet_wrap(~state_full, scales = "free_y") +
+  scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
+  scale_colour_manual(values = c("chartreuse4", "goldenrod4", "firebrick4")) +
+  scale_x_date(date_labels = "%e %b") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off") +
+  labs(x = "Notification date", y = "Daily confirmed cases excluding overseas",
+       title = "EpiNow2 model for Covid cases in selected Australian states and New Zealand",
+       caption = glue("Estimated using EpiNow2 R package using data from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior prediction intervals.\nPlot created {Sys.Date()} with most recent cases from {max(case_data$date)}. Contact: twitter.com/camjpatrick"))
+```
+
+```{r epinow-reff}
+est_R %>%
+  filter(date >= ymd("2021-08-01")) %>%
+  ggplot(aes(x = date, fill = type, group = type)) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_vline(xintercept = max(case_data$date), linetype = "dashed", colour = "grey50") +
+  geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3) +
+  geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6) +
+  facet_wrap(~state_full) +
+  scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
+  scale_x_date(date_labels = "%e %b") +
+  scale_y_log10(breaks = c(1/8, 1/4, 1/2, 1, 2, 4, 8)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off") +
+  labs(x = "Notification date", y = "Estimated effective reproduction number (Reff)",
+       title = "Estimated Reff in selected Australian states and New Zealand",
+       caption = glue("Estimated using EpiNow2 R package. Data from github.com/pappubahry and NZ Health.\nBands represent 20%, 50%, 90% posterior credible intervals.\nPlot created {Sys.Date()} with most recent cases from {max(case_data$date)}. Contact: twitter.com/camjpatrick"))
+```
+
+
+
+
+## R session info
+
+```{r session-info}
+Sys.time()
+sessionInfo()
+```
+

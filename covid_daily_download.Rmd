@@ -1,0 +1,134 @@
+---
+title: "COVID-19 daily data download"
+author: "Cameron Patrick"
+date: "12 September 2021"
+output: 
+  html_document:
+    toc: true
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = TRUE,
+  message = TRUE,
+  comment = NA
+)
+```
+
+## Load R packages
+
+```{r packages, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(tidylog)
+library(lubridate)
+library(glue)
+```
+
+## Sanity check output file
+
+```{r}
+rds_file <- glue("covid19_aus_munged_{Sys.Date()}.Rds")
+if (file.exists(rds_file)) {
+  warning("overwriting existing Rds file!")
+}
+```
+
+## Data download
+
+Aus data from: <https://github.com/pappubahry/AU_COVID19>
+
+Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
+
+```{r data-download}
+nz_url_date <- "2021-09-13"
+#nz_url_date <- Sys.Date()
+
+covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
+covid19_nsw <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_nsw_sources.csv")
+covid19_act <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_act_sources.csv")
+covid19_nz <- read_csv(glue("https://www.health.govt.nz/system/files/documents/pages/covid_cases_{nz_url_date}.csv"))
+```
+
+Most recent observations by state:
+
+```{r}
+max(covid19_vic$date)
+max(covid19_nsw$date - 1)
+max(covid19_act$date)
+max(covid19_nz$`Report Date`)
+```
+
+
+## Data wrangling
+
+```{r}
+extra_info <- tribble(
+  ~state, ~date, ~daily_confirmed,
+  "VIC", "2021-09-11", 392,
+  "VIC", "2021-09-12", 473,
+  "NSW", "2021-09-10", 1599,
+  "NSW", "2021-09-11", 1262,
+  "NSW", "2021-09-12", 1257,
+  "ACT", "2021-09-11", 15,
+  "ACT", "2021-09-12", 13,
+) %>%
+  mutate(date = ymd(date))
+```
+
+```{r}
+outbreak_dates <- tribble(
+  ~state, ~outbreak_date,
+  "VIC", "2021-07-12",
+  "NSW", "2021-06-15",
+  "ACT", "2021-08-12",
+  "NZ", "2021-08-17",
+) %>%
+  mutate(outbreak_date = ymd(outbreak_date))
+```
+
+
+```{r data-munge}
+selected_states_abbrev <- c("VIC", "NSW", "ACT", "NZ")
+selected_states_full <- c("Victoria", "New South Wales", "Australian Capital Territory", "New Zealand")
+
+covid19_aus_munged <- bind_rows(
+  "VIC" = covid19_vic %>%
+    transmute(date,
+              daily_confirmed = local_contact + local_unknown + under_investigation),
+  "NSW" = covid19_nsw %>%
+    transmute(date = date - 1,
+              daily_confirmed = interstate + local_contact + local_unknown + under_investigation),
+  "ACT" = covid19_act %>%
+    transmute(date,
+              daily_confirmed = interstate + local_contact + local_unknown + under_investigation),
+  "NZ" = covid19_nz %>%
+    filter(`Overseas travel` != "Yes" & `Report Date` < ymd(str_extract(nz_url_date, "^[0-9-]+"))) %>%
+    group_by(date = `Report Date`) %>%
+    summarise(daily_confirmed = n()),
+  .id = "state"
+) %>%
+  bind_rows(anti_join(extra_info, ., by = c("state", "date"))) %>%
+  left_join(outbreak_dates, by = "state") %>%
+  group_by(state) %>%
+  complete(date = seq(min(date), max(date), by = "day"),
+           fill = list(daily_confirmed = 0)) %>%
+  ungroup() %>%
+  mutate(state = factor(state, levels = selected_states_abbrev),
+         state_full = factor(state, levels = selected_states_abbrev, labels = selected_states_full))
+```
+
+## Save as R data file
+
+```{r}
+saveRDS(covid19_aus_munged, rds_file)
+```
+
+## R session info
+
+```{r session-info}
+Sys.time()
+sessionInfo()
+```
+

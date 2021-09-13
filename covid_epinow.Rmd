@@ -1,0 +1,136 @@
+---
+title: "COVID-19 EpiNow model fitting"
+author: "Cameron Patrick"
+date: "12 September 2021"
+output: 
+  html_document:
+    toc: true
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = TRUE,
+  message = TRUE,
+  comment = NA
+)
+```
+
+## Load R packages
+
+<!--
+remotes::install_github("epiforecasts/EpiNow2")
+-->
+
+```{r packages, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(EpiNow2)
+```
+
+## Read data file
+
+```{r}
+data_file <- last(sort(Sys.glob("covid19_aus_munged_*.Rds")))
+print(data_file)
+covid19_aus_munged <- readRDS(data_file)
+```
+
+## EpiNow
+
+```{r epinow-setup}
+# code below from EpiNow2 example:
+# define reporting delay as lognormal with mean of 4 days and sd of 1 day in absence of
+# evidence. If data on onset -> report then can use estimate_delay to estimate the delay
+reporting_delay <- list(mean = convert_to_logmean(4, 1),
+                        mean_sd = 0.1,
+                        sd = convert_to_logsd(4, 1),
+                        sd_sd = 0.1,
+                        max = 15)
+
+# get generation and incubation parameter estimates for COVID from the
+# EpiNow2 package.
+generation_time <- get_generation_time("SARS-CoV-2", "ganyani", max_value = 30)
+incubation_period <- get_incubation_period("SARS-CoV-2", "lauer", max_value = 30)
+```
+
+Prepare data for model fitting:
+
+```{r prepare-data-epinow}
+dat_aus <- covid19_aus_munged %>%
+  filter(date >= outbreak_date) %>%
+  rename(confirm = daily_confirmed) %>%
+  arrange(state, date) %>%
+  nest_by(state, state_full)
+```
+
+```{r}
+run_state_epinow <- function(state, dat) {
+  cat("Running model for", as.character(state), "\n")
+  
+  # latest
+  last_date <- max(dat$date)
+  cat("Latest observation:", as.character(last_date), "\n")
+  
+  # find last saved data
+  saved_data <- Sys.glob(glue("estimates_{state}_*.Rds"))
+  if (length(saved_data) > 0) {
+    last_save <- last(sort(saved_data))
+    last_save_date <- str_match(last_save, "_([0-9-]+)\\.Rds$")[, 2]
+    cat("Last save date:", last_save_date, "\n")
+    if (ymd(last_save_date) >= last_date) {
+      cat("No updates for", as.character(state), "\n")
+      return(invisible(readRDS(last_save)))
+    }
+  } else {
+    cat("No saved data files\n")
+  }
+  
+  cat("Running new model, start time:", as.character(Sys.time()), "\n")
+  estimates <- epinow(
+    reported_cases = dat,
+    generation_time = generation_time,
+    delays = delay_opts(incubation_period, reporting_delay),
+    # rt = rt_opts(future = "project"),
+    # stan = stan_opts(samples = 400,
+    #                  warmup = 100,
+    #                  chains = 4,
+    #                  cores = 4),
+    stan = stan_opts(samples = 3000,
+                     warmup = 500,
+                     chains = 4,
+                     cores = 4),
+    horizon = 7,
+    verbose = TRUE
+  )
+  cat("Model fitting complated at time:", as.character(Sys.time()), "\n")
+  saveRDS(estimates, glue("estimates_{state}_{last_date}.Rds"))
+  invisible(estimates)
+}
+```
+
+
+Fit models:
+
+```{r run-epinow}
+aus_models <- dat_aus %>%
+  rowwise(state, state_full) %>%
+  mutate(model = list(run_state_epinow(state, data)))
+```
+
+Save full output:
+
+```{r}
+saveRDS(aus_models, glue("estimates_aus_{Sys.Date()}.Rds"))
+```
+
+
+## R session info
+
+```{r session-info}
+Sys.time()
+sessionInfo()
+```
+
