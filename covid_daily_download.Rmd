@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 daily data download"
 author: "Cameron Patrick"
-date: "12 September 2021"
+date: "14 September 2021"
 output: 
   html_document:
     toc: true
@@ -24,6 +24,7 @@ library(tidyverse)
 library(tidylog)
 library(lubridate)
 library(glue)
+library(gt)
 ```
 
 ## Sanity check output file
@@ -42,7 +43,7 @@ Aus data from: <https://github.com/pappubahry/AU_COVID19>
 Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
 
 ```{r data-download}
-nz_url_date <- "2021-09-13"
+nz_url_date <- "2021-09-14"
 #nz_url_date <- Sys.Date()
 
 covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
@@ -68,11 +69,14 @@ extra_info <- tribble(
   ~state, ~date, ~daily_confirmed,
   "VIC", "2021-09-11", 392,
   "VIC", "2021-09-12", 473,
+  "VIC", "2021-09-13", 445,
   "NSW", "2021-09-10", 1599,
   "NSW", "2021-09-11", 1262,
   "NSW", "2021-09-12", 1257,
+  "NSW", "2021-09-13", 1127,
   "ACT", "2021-09-11", 15,
   "ACT", "2021-09-12", 13,
+  "ACT", "2021-09-13", 22,
 ) %>%
   mutate(date = ymd(date))
 ```
@@ -118,6 +122,18 @@ covid19_aus_munged <- bind_rows(
   mutate(state = factor(state, levels = selected_states_abbrev),
          state_full = factor(state, levels = selected_states_abbrev, labels = selected_states_full))
 ```
+
+## Most recent case numbers
+
+```{r}
+covid19_aus_munged %>%
+  arrange(state, desc(date)) %>%
+  group_by(state) %>%
+  summarise(head(cur_data(), n = 5)) %>%
+  select(state, date, daily_confirmed) %>%
+  gt()
+```
+
 
 ## Save as R data file
 
