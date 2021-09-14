@@ -1,7 +1,7 @@
 ---
 title: "Tracking plots for Australia / New Zealand 2021 Covid outbreak"
 author: "Cameron Patrick"
-date: "September 2021"
+date: "14 September 2021"
 output: 
   html_document:
     toc: true
@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   comment = NA,
   fig.width = 7,
   fig.height = 6,
-  dpi = 200,
+  dpi = 130,
   fig.retina = 2,
   dev = "ragg_png"
 )
@@ -43,7 +43,7 @@ theme_set(
         plot.caption = element_text(size = rel(7/11)),
         strip.background = element_blank(),
         strip.text = element_text(hjust = 0, size = rel(1)),
-        axis.text = element_text(colour = "black", size = rel(1)),
+        axis.text = element_text(colour = "black", size = rel(9/11)),
         axis.title = element_text(size = rel(1)))
 )
 ```
@@ -172,8 +172,8 @@ pred_int %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "GAM model for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the mgcv R package.\nBands are 20%, 50%, 90% parametric bootstrap prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
-# ggsave(glue("plots/{Sys.Date()}/cases_gam_mgcv.png"),
-#        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+ggsave(glue("plots/{Sys.Date()}/cases_gam_mgcv.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ### brms (Bayesian)
@@ -252,7 +252,7 @@ pred_int_brm %>%
   geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
-  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, stroke = 1, alpha = 0.8) +
+  geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   expand_limits(y = 0) +
   facet_wrap(~state_full, scale = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
@@ -260,6 +260,8 @@ pred_int_brm %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "Bayesian GAM for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the brms R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/cases_gam_brms.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 
@@ -287,7 +289,7 @@ est_cases %>%
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3, colour = NA) +
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3, colour = NA) +
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6, colour = NA) +
-  geom_point(aes(y = confirm), pch = 1, stroke = 1, alpha = 0.8) +
+  geom_point(aes(y = confirm), pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   facet_wrap(~state_full, scales = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
   scale_colour_manual(values = c("chartreuse4", "goldenrod4", "firebrick4")) +
@@ -295,6 +297,8 @@ est_cases %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "EpiNow2 model for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/cases_epinow.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ```{r epinow-reff}
@@ -312,6 +316,8 @@ est_R %>%
   labs(x = NULL, y = "Estimated effective reproduction number (Reff)",
        title = "Estimated Reff in selected Australian states and New Zealand",
        caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior credible intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/reff_epinow.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 
