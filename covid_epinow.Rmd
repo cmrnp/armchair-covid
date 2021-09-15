@@ -98,14 +98,14 @@ run_state_epinow <- function(state, dat) {
     #                  warmup = 100,
     #                  chains = 4,
     #                  cores = 4),
-    stan = stan_opts(samples = 3000,
-                     warmup = 500,
+    stan = stan_opts(samples = 4000,
+                     warmup = 750,
                      chains = 4,
                      cores = 4),
     horizon = 7,
     verbose = TRUE
   )
-  cat("Model fitting complated at time:", as.character(Sys.time()), "\n")
+  cat("Model fitting completed at time:", as.character(Sys.time()), "\n")
   saveRDS(estimates, glue("estimates_{state}_{last_date}.Rds"))
   invisible(estimates)
 }
