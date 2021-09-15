@@ -1,7 +1,7 @@
 ---
 title: "Tracking plots for Australia / New Zealand 2021 Covid outbreak"
 author: "Cameron Patrick"
-date: "14 September 2021"
+date: "15 September 2021"
 output: 
   html_document:
     toc: true
@@ -290,6 +290,7 @@ est_cases %>%
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3, colour = NA) +
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6, colour = NA) +
   geom_point(aes(y = confirm), pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
+  expand_limits(y = 0) +
   facet_wrap(~state_full, scales = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
   scale_colour_manual(values = c("chartreuse4", "goldenrod4", "firebrick4")) +
@@ -309,6 +310,7 @@ est_R %>%
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6) +
+  expand_limits(x = ymd("2021-09-16")) +
   facet_wrap(~state_full) +
   scale_fill_manual(values = c("chartreuse3", "goldenrod3")) +
   scale_x_date(date_labels = "%e %b") +
