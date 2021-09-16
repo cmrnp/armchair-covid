@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 daily data download"
 author: "Cameron Patrick"
-date: "15 September 2021"
+date: "16 September 2021"
 output: 
   html_document:
     toc: true
@@ -21,7 +21,6 @@ knitr::opts_chunk$set(
 
 ```{r packages, warning = FALSE, message = FALSE}
 library(tidyverse)
-library(tidylog)
 library(lubridate)
 library(glue)
 library(gt)
@@ -31,9 +30,6 @@ library(gt)
 
 ```{r}
 rds_file <- glue("covid19_aus_munged_{Sys.Date()}.Rds")
-if (file.exists(rds_file)) {
-  warning("overwriting existing Rds file!")
-}
 ```
 
 ## Data download
@@ -42,25 +38,14 @@ Aus data from: <https://github.com/pappubahry/AU_COVID19>
 
 Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
 
-```{r data-download}
-nz_url_date <- "2021-09-15"
-#nz_url_date <- Sys.Date()
+```{r data-download, warning = FALSE, message = FALSE}
+nz_url_date <- "2021-09-16"
 
 covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
 covid19_nsw <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_nsw_sources.csv")
 covid19_act <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_act_sources.csv")
 covid19_nz <- read_csv(glue("https://www.health.govt.nz/system/files/documents/pages/covid_cases_{nz_url_date}.csv"))
 ```
-
-Most recent observations by state:
-
-```{r}
-max(covid19_vic$date)
-max(covid19_nsw$date - 1)
-max(covid19_act$date)
-max(covid19_nz$`Report Date`)
-```
-
 
 ## Data wrangling
 
@@ -71,15 +56,18 @@ extra_info <- tribble(
   "VIC", "2021-09-12", 473,
   "VIC", "2021-09-13", 445,
   "VIC", "2021-09-14", 423,
+  "VIC", "2021-09-15", 514,
   "NSW", "2021-09-10", 1599,
   "NSW", "2021-09-11", 1262,
   "NSW", "2021-09-12", 1257,
   "NSW", "2021-09-13", 1127,
   "NSW", "2021-09-14", 1259,
+  "NSW", "2021-09-15", 1351,
   "ACT", "2021-09-11", 15,
   "ACT", "2021-09-12", 13,
   "ACT", "2021-09-13", 22,
   "ACT", "2021-09-14", 13,
+  "ACT", "2021-09-15", 15,
 ) %>%
   mutate(date = ymd(date))
 ```

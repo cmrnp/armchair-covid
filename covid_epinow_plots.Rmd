@@ -1,7 +1,7 @@
 ---
 title: "Tracking plots for Australia / New Zealand 2021 Covid outbreak"
 author: "Cameron Patrick"
-date: "15 September 2021"
+date: "16 September 2021"
 output: 
   html_document:
     toc: true
@@ -178,7 +178,7 @@ ggsave(glue("plots/{Sys.Date()}/cases_gam_mgcv.png"),
 
 ### brms (Bayesian)
 
-```{r,  include = FALSE}
+```{r brm-fit,  include = FALSE}
 brm_fit_empty <-
   brm(
     formula = daily_confirmed ~ s(date_numeric, bs = "tp", k = 20),
@@ -186,11 +186,12 @@ brm_fit_empty <-
     family = negbinomial(link = "log", link_shape = "log"),
     prior = c(prior(normal(log_mean, log_mean), class = Intercept),
               prior(normal(0, 10*log_sd), class = b),
-              prior(normal(0, 10*log_sd), class = sds),
-              prior(gamma(0.01, 0.01), class = shape)),
+              prior(student_t(3, 0, 10*log_sd), class = sds),
+              prior(gamma(1, 0.01), class = shape)),
     stanvars = c(stanvar(3, "log_mean"),
                  stanvar(1, "log_sd")),
     backend = "cmdstanr",
+    control = list(adapt_delta = 0.9),
     chains = 1,
     iter = 100
   )
@@ -210,6 +211,10 @@ state_brm_gams <- covid19_aus_munged %>%
                              iter = 2000,
                              warmup = 500,
                              cores = 4)))
+```
+
+```{r}
+#walk(state_brm_gams$model, ~print(summary(.)))
 ```
 
 
