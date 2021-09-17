@@ -1,7 +1,7 @@
 ---
 title: "Tracking plots for Australia / New Zealand 2021 Covid outbreak"
 author: "Cameron Patrick"
-date: "16 September 2021"
+date: "17 September 2021"
 output: 
   html_document:
     toc: true
@@ -191,7 +191,6 @@ brm_fit_empty <-
     stanvars = c(stanvar(3, "log_mean"),
                  stanvar(1, "log_sd")),
     backend = "cmdstanr",
-    control = list(adapt_delta = 0.9),
     chains = 1,
     iter = 100
   )
