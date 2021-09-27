@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 daily data download"
 author: "Cameron Patrick"
-date: "26 September 2021"
+date: "27 September 2021"
 output: 
   html_document:
     toc: true
@@ -39,7 +39,7 @@ Aus data from: <https://github.com/pappubahry/AU_COVID19>
 Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
 
 ```{r data-download, warning = FALSE, message = FALSE}
-nz_url_date <- "2021-09-26"
+nz_url_date <- "2021-09-27"
 
 covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
 covid19_nsw <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_nsw_sources.csv")
@@ -67,6 +67,7 @@ extra_info <- tribble(
   "VIC", "2021-09-23", 733,
   "VIC", "2021-09-24", 847,
   "VIC", "2021-09-25", 779,
+  "VIC", "2021-09-26", 705,
   "NSW", "2021-09-10", 1599,
   "NSW", "2021-09-11", 1262,
   "NSW", "2021-09-12", 1257,
@@ -83,6 +84,7 @@ extra_info <- tribble(
   "NSW", "2021-09-23", 1043,
   "NSW", "2021-09-24", 1007,
   "NSW", "2021-09-25", 961,
+  "NSW", "2021-09-26", 787,
   "ACT", "2021-09-11", 15,
   "ACT", "2021-09-12", 13,
   "ACT", "2021-09-13", 22,
@@ -98,6 +100,7 @@ extra_info <- tribble(
   "ACT", "2021-09-23", 19,
   "ACT", "2021-09-24", 32,
   "ACT", "2021-09-25", 25,
+  "ACT", "2021-09-26", 19,
 ) %>%
   mutate(date = ymd(date))
 ```

@@ -13,7 +13,10 @@ knitr::opts_chunk$set(
   echo = TRUE,
   warning = TRUE,
   message = TRUE,
-  comment = NA
+  comment = NA,
+  fig.width = 8,
+  fig.height = 6,
+  dpi = 110
 )
 ```
 
@@ -93,11 +96,12 @@ run_state_epinow <- function(state, dat) {
     reported_cases = dat,
     generation_time = generation_time,
     delays = delay_opts(incubation_period, reporting_delay),
-    # rt = rt_opts(future = "project"),
     stan = stan_opts(samples = 4000,
                      warmup = 750,
                      chains = 4,
                      cores = 4),
+    gp = gp_opts(basis_prop = 0.1),
+    rt = rt_opts(prior = list(mean = 1, sd = 0.25)),
     horizon = 7,
     verbose = TRUE
   )
@@ -120,6 +124,13 @@ Save full output:
 
 ```{r}
 saveRDS(aus_models, glue("estimates_aus_{Sys.Date()}.Rds"))
+```
+
+## Quick plots
+
+```{r}
+walk(aus_models$model, ~print(summary(.)))
+walk(aus_models$model, ~print(plot(.)))
 ```
 
 
