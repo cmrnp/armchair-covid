@@ -317,7 +317,7 @@ est_R %>%
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6) +
-  expand_limits(x = ymd("2021-09-16")) +
+  expand_limits(x = ymd("2021-10-02")) +
   facet_wrap(~state_full) +
   scale_fill_manual(values = c("chartreuse3", "goldenrod3")) +
   scale_x_date(date_labels = "%e %b") +
