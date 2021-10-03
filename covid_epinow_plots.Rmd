@@ -48,6 +48,10 @@ theme_set(
 )
 ```
 
+```{r}
+plot_start_date <- "2021-09-01"
+```
+
 ## Data import
 
 ### Raw case numbers
@@ -106,7 +110,7 @@ case_data %>%
 
 ```{r}
 state_gams <- covid19_aus_munged %>%
-  filter(date >= outbreak_date) %>%
+  filter(date >= outbreak_date & date >= plot_start_date) %>%
   mutate(date_numeric = as.numeric(date - outbreak_date)) %>%
   nest_by(state, state_full) %>%
   mutate(model = list(
@@ -124,7 +128,7 @@ pred_int <- state_gams %>%
     full_join(
       data,
       augment(model,
-              newdata = tibble(date_numeric = 0:(max(data$date_numeric) + extrap_days),
+              newdata = tibble(date_numeric = min(data$date_numeric):(max(data$date_numeric) + extrap_days),
                                is_extrap = date_numeric > max(data$date_numeric)),
               type.predict = "link"),
       by = "date_numeric"
@@ -159,7 +163,6 @@ pred_int <- state_gams %>%
 
 ```{r mgcv-cases}
 pred_int %>%
-  filter(date >= "2021-08-01") %>%
   ggplot(aes(x = date, group = is_extrap, fill = is_extrap)) +
   geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
@@ -193,11 +196,12 @@ brm_fit_empty <-
                  stanvar(1, "log_sd")),
     backend = "cmdstanr",
     chains = 1,
-    iter = 100
+    iter = 50,
+    control = list(adapt_delta = 0.99)
   )
 
 state_brm_gams <- covid19_aus_munged %>%
-  filter(date >= outbreak_date) %>%
+  filter(date >= outbreak_date & date >= plot_start_date) %>%
   mutate(date_numeric = as.numeric(date - outbreak_date)) %>%
   nest_by(state, state_full) %>%
   mutate(log_mean = mean(log(data$daily_confirmed + 0.5), na.rm = TRUE),
@@ -232,7 +236,7 @@ pred_int_brm <- state_brm_gams %>%
   summarise(
     augment_brm_predict(
       model,
-      newdata = tibble(date_numeric = 0:(max(data$date_numeric) + extrap_days),
+      newdata = tibble(date_numeric = min(data$date_numeric):(max(data$date_numeric) + extrap_days),
                        is_extrap = date_numeric > max(data$date_numeric),
                        outbreak_date = first(data$outbreak_date)),
       probs = c(0.05, 0.25, 0.4, 0.6, 0.75, 0.95)
@@ -252,7 +256,6 @@ pred_int_brm <- state_brm_gams %>%
 
 ```{r brm-cases}
 pred_int_brm %>%
-  filter(date >= "2021-08-01") %>%
   ggplot(aes(x = date, group = is_extrap, fill = is_extrap)) +
   geom_ribbon(aes(ymin = lower90, ymax = upper90), alpha = 0.3) +
   geom_ribbon(aes(ymin = lower50, ymax = upper50), alpha = 0.3) +
@@ -290,7 +293,6 @@ est_R <- estimates_aus %>%
 
 ```{r epinow-cases}
 est_cases %>%
-  filter(date >= ymd("2021-08-01")) %>%
   ggplot(aes(x = date, colour = type, fill = type, group = type)) +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3, colour = NA) +
   geom_ribbon(aes(ymin = lower_50, ymax = upper_50), alpha = 0.3, colour = NA) +
@@ -311,7 +313,7 @@ ggsave(glue("plots/{Sys.Date()}/cases_epinow.png"),
 
 ```{r epinow-reff}
 est_R %>%
-  filter(date >= ymd("2021-08-01"), type != "forecast") %>%
+  filter(type != "forecast") %>%
   ggplot(aes(x = date, fill = type, group = type)) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_ribbon(aes(ymin = lower_90, ymax = upper_90), alpha = 0.3) +

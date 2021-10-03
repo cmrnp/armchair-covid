@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 EpiNow model fitting"
 author: "Cameron Patrick"
-date: "12 September 2021"
+date: "3 October 2021"
 output: 
   html_document:
     toc: true
@@ -41,6 +41,10 @@ print(data_file)
 covid19_aus_munged <- readRDS(data_file)
 ```
 
+```{r}
+plot_start_date <- "2021-09-01"
+```
+
 ## EpiNow
 
 ```{r epinow-setup}
@@ -63,7 +67,7 @@ Prepare data for model fitting:
 
 ```{r prepare-data-epinow}
 dat_aus <- covid19_aus_munged %>%
-  filter(date >= outbreak_date) %>%
+  filter(date >= outbreak_date & date >= plot_start_date) %>%
   rename(confirm = daily_confirmed) %>%
   arrange(state, date) %>%
   nest_by(state, state_full)
