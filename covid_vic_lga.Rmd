@@ -1,0 +1,141 @@
+---
+title: "Victoria 2021 Covid outbreak by LGA"
+author: "Cameron Patrick"
+date: "`r strftime(Sys.Date(), '%e %B %Y')`"
+output: 
+  html_document:
+    toc: true
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  comment = NA,
+  fig.width = 7,
+  fig.height = 6,
+  dpi = 130,
+  fig.retina = 2,
+  dev = "ragg_png"
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(gt)
+library(mgcv)
+library(broom)
+library(geofacet)
+```
+
+```{r}
+theme_set(
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title.position = "plot",
+        legend.position = "off",
+        plot.title = element_text(size = rel(1.0)),
+        plot.caption = element_text(size = rel(7/11)),
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, size = rel(7/11)),
+        axis.text = element_text(colour = "black", size = rel(7/11)),
+        axis.title = element_text(size = rel(1)))
+)
+```
+
+```{r}
+plot_start_date <- "2021-09-01"
+```
+
+## Data import
+
+```{r load-data}
+data_file <- last(sort(Sys.glob("LGA/NCOV_COVID_Cases_by_LGA_Source_*.csv")))
+cat("Latest data file:", data_file, "\n")
+vic_lga_orig <- read_csv(data_file)
+```
+
+```{r}
+melb_grid <- read_csv("melb_LGA_grid.csv")
+```
+
+```{r}
+vic_lga <- vic_lga_orig %>%
+  filter(acquired != "Travel overseas") %>%
+  group_by(lga_full = Localgovernmentarea, date = diagnosis_date) %>%
+  summarise(confirmed = n()) %>%
+  ungroup() %>%
+  complete(lga_full, date, fill = list(confirmed = 0)) %>%
+  mutate(lga = str_replace_all(lga_full, r"( \([A-Z]+\)$)", ""))
+```
+
+```{r}
+fs::dir_create(glue("plots/{Sys.Date()}"))
+```
+
+
+## Metro Melb
+
+
+
+```{r}
+melb_lga <- vic_lga %>%
+  filter(lga %in% melb_grid$name)
+stopifnot(length(unique(melb_lga$lga)) == nrow(filter(melb_grid, !str_detect(name, "^ocean"))))
+```
+
+```{r}
+label_dat <- melb_lga %>%
+  summarise(date = ymd("2021-09-01"),
+         confirmed = max(confirmed)) %>%
+  expand_grid(lga = melb_grid$name) %>%
+  mutate(is_ocean = str_detect(lga, "^ocean"),
+         label = lga %>%
+           str_replace("^Greater ", "Gtr. ") %>%
+           str_replace("Mornington Peninsula", "Morn. Pen.") %>%
+           str_replace("^ocean.*", ""))
+melb_lga %>%
+  filter(date >= "2021-09-01") %>%
+  ggplot(aes(x = date, y = confirmed)) +
+  geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
+  geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt) +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf) +
+  facet_geo(vars(lga), grid = melb_grid) +
+  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  expand_limits(x = ymd("2021-10-02")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt")) +
+  labs(x = NULL, 
+       y = "Daily confirmed cases excluding overseas",
+       caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/cases_vic_lga.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+```
+
+
+
+
+
+## Regional Vic
+
+
+## R session info
+
+```{r session-info}
+Sys.time()
+sessionInfo()
+```
+

@@ -1,0 +1,40 @@
+row,col,code,name
+3,3,MELB,Melbourne
+4,5,STON,Stonnington
+2,5,BANY,Banyule
+3,1,BRIM,Brimbank
+3,5,BORO,Boroondara
+6,6,CASE,Casey
+2,3,MORE,Moreland
+1,2,HUME,Hume
+7,3,MORN,Mornington Peninsula
+5,1,WYND,Wyndham
+5,4,GLEN,Glen Eira
+5,5,MONA,Monash
+4,4,PORT,Port Phillip
+1,1,MELT,Melton
+2,4,DARE,Darebin
+7,4,FRAN,Frankston
+2,2,MOON,Moonee Valley
+1,4,WHIT,Whittlesea
+5,3,BAYS,Bayside
+3,4,YARR,Yarra
+2,6,MANN,Manningham
+6,4,KING,Kingston
+1,6,NILL,Nillumbik
+3,6,WHIT,Whitehorse
+1,7,YARR,Yarra Ranges
+4,1,HOBS,Hobsons Bay
+6,5,GREA,Greater Dandenong
+6,7,CARD,Cardinia
+3,2,MARI,Maribyrnong
+5,6,KNOX,Knox
+3,7,MARO,Maroondah
+6,1,OCE1,ocean1
+7,1,OCE2,ocean2
+4,2,OCE3,ocean3
+5,2,OCE4,ocean4
+6,2,OCE5,ocean5
+7,2,OCE6,ocean6
+4,3,OCE7,ocean7
+6,3,OCE8,ocean8
