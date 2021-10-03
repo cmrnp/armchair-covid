@@ -24,6 +24,8 @@ knitr::opts_chunk$set(
 
 ```{r packages}
 library(tidyverse)
+library(readxl)
+library(janitor)
 library(lubridate)
 library(glue)
 library(gt)
@@ -129,8 +131,121 @@ ggsave(glue("plots/{Sys.Date()}/cases_vic_lga.png"),
 
 
 
-## Regional Vic
+## Vaccination
 
+```{r}
+vax_excel_files <- tibble(
+  path = Sys.glob("vax_LGA/*.xlsx"),
+  date = path %>%
+    str_extract("[0-9]{1,2}-[a-z]+-[0-9]{4}") %>%
+    str_replace_all("-", " ") %>%
+    dmy()
+) %>%
+  arrange(date) %>%
+  rowwise() %>%
+  mutate(data = list(read_xlsx(path, skip = 8, na = c("", "N/A"))))
+```
+
+```{r}
+clean_vax_excel <- function(dat) {
+  dat %>%
+    clean_names() %>%
+    select(lga_full = starts_with("lga") & !contains("population"),
+           state = contains("jurisdiction") | contains("state"),
+           dose_1 = contains("dose_1"),
+           dose_2 = contains("dose_2")) %>%
+    mutate(lga_full = as.character(lga_full), 
+           across(dose_1:dose_2,
+                  ~{if(is.numeric(.)) . else as.numeric(str_replace_all(., "[%>]", ""))/100}))
+}
+```
+
+```{r}
+vax_data <- vax_excel_files %>%
+  mutate(data = list(clean_vax_excel(data))) %>%
+  unnest(data) %>%
+  pivot_longer(dose_1:dose_2, names_to = "dose", values_to = "prop")
+
+vax_vic <- vax_data %>% 
+  filter(state == "Victoria") %>%
+  mutate(lga = str_replace_all(lga_full, r"( \([A-Za-z.]+\))", ""))
+vax_melb <- vax_vic %>%
+  filter(lga %in% melb_grid$name)
+```
+
+```{r}
+label_dat <- vax_melb %>%
+  summarise(date = min(date),
+            prop = 1,
+            dose = "dose_1") %>%
+  expand_grid(lga = melb_grid$name) %>%
+  mutate(is_ocean = str_detect(lga, "^ocean"),
+         label = lga %>%
+           str_replace("^Greater ", "Gtr. ") %>%
+           str_replace("Mornington Peninsula", "Morn. Pen.") %>%
+           str_replace("^ocean.*", ""))
+vax_melb %>%
+  #filter(date >= "2021-09-01") %>%
+  ggplot(aes(x = date, y = prop, colour = dose, group = dose)) +
+  # geom_hline(yintercept = 0.7, size = 0.5, colour = "grey80") +
+  # geom_hline(yintercept = 0.8, size = 0.5, colour = "grey80") +
+  # geom_hline(yintercept = 0.9, size = 0.5, colour = "grey80") +
+  geom_rect(data = filter(label_dat, !is_ocean),
+            fill = "chartreuse3", colour = NA,
+            alpha = 0.15,
+            xmin = -Inf, xmax = Inf,
+            ymin = 0.7, ymax = Inf,
+            show.legend = FALSE) +
+  geom_rect(data = filter(label_dat, !is_ocean),
+            fill = "chartreuse3", colour = NA,
+            alpha = 0.2,
+            xmin = -Inf, xmax = Inf,
+            ymin = 0.8, ymax = Inf,
+            show.legend = FALSE) +
+  geom_rect(data = filter(label_dat, !is_ocean),
+            fill = "chartreuse3", colour = NA,
+            alpha = 0.25,
+            xmin = -Inf, xmax = Inf,
+            ymin = 0.9, ymax = Inf,
+            show.legend = FALSE) +
+  geom_line(alpha = 1, size = 0.75) +
+  geom_point(size = 1.5, stroke = 0.75, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt,
+            colour = "black",
+            show.legend = FALSE) +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf,
+            show.legend = FALSE) +
+  facet_geo(vars(lga), grid = melb_grid) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0, 1, by = 0.2),
+                     labels = scales::label_percent(accuracy = 1)) +
+  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  #expand_limits(x = ymd("2021-10-02")) +
+  scale_colour_manual(NULL,
+                      breaks = c("dose_1", "dose_2"),
+                      labels = c("First dose", "Second dose"),
+                      values = c("firebrick2", "firebrick4")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt"),
+        panel.grid = element_blank(),
+        legend.position = c(1, 0),
+        legend.justification = c(1, 0),
+        legend.margin = margin(0, 0, 0, 0)) +
+  labs(x = NULL, 
+       y = "Percentage of LGA population vaccinated",
+       caption = glue("Plot created {Sys.Date()}; most recent data {max(vax_melb$date)}. Data: Australian Dept of Health. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/vax_melb_lga.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+
+```
 
 ## R session info
 
