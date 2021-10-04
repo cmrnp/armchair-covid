@@ -55,6 +55,21 @@ plot_start_date <- "2021-09-01"
 
 ## Data import
 
+Note, data obtained from:
+<https://www.coronavirus.vic.gov.au/victorian-coronavirus-covid-19-data>,
+<https://www.dhhs.vic.gov.au/ncov-covid-cases-by-lga-source-csv>
+
+Vaccination data from: <https://www.health.gov.au/resources/collections/covid-19-vaccination-geographic-vaccination-rates-lga>
+
+LGA population data from: <https://www.planning.vic.gov.au/land-use-and-population-research/victoria-in-future>
+
+```{r}
+fix_lga <- function(lga_full) {
+  str_replace_all(lga_full, r"( \([A-Za-z.]+\))", "")
+}
+```
+
+
 ```{r load-data}
 data_file <- last(sort(Sys.glob("LGA/NCOV_COVID_Cases_by_LGA_Source_*.csv")))
 cat("Latest data file:", data_file, "\n")
@@ -63,7 +78,21 @@ vic_lga_orig <- read_csv(data_file)
 
 ```{r}
 melb_grid <- read_csv("melb_LGA_grid.csv")
+lga_regions <- read_csv("LGA_regions.csv") %>%
+  select(lga = LGA, region = Region) %>%
+  mutate(lga = str_to_title(lga))
+regional_grid <- read_csv("regional_grid.csv")
 ```
+
+```{r}
+lga_pop_data_orig <- read_xlsx("VIF2019_Population_Service_Ages_LGA_2036.xlsx", sheet = "Age Sex", skip = 11)
+lga_pop_data <- lga_pop_data_orig %>%
+  clean_names() %>%
+  remove_empty() %>%
+  select(lga_full = lga, lga_population_2021 = persons_total_40) %>%
+  mutate(lga = fix_lga(lga_full))
+```
+
 
 ```{r}
 vic_lga <- vic_lga_orig %>%
@@ -72,7 +101,9 @@ vic_lga <- vic_lga_orig %>%
   summarise(confirmed = n()) %>%
   ungroup() %>%
   complete(lga_full, date, fill = list(confirmed = 0)) %>%
-  mutate(lga = str_replace_all(lga_full, r"( \([A-Z]+\)$)", ""))
+  mutate(lga = fix_lga(lga_full)) %>%
+  left_join(select(lga_pop_data, lga, lga_population_2021)) %>%
+  mutate(confirmed_per_100k = confirmed / lga_population_2021 * 100000)
 ```
 
 ```{r}
@@ -93,7 +124,8 @@ stopifnot(length(unique(melb_lga$lga)) == nrow(filter(melb_grid, !str_detect(nam
 ```{r}
 label_dat <- melb_lga %>%
   summarise(date = ymd("2021-09-01"),
-         confirmed = max(confirmed)) %>%
+         confirmed = max(confirmed),
+         confirmed_per_100k = max(confirmed_per_100k)) %>%
   expand_grid(lga = melb_grid$name) %>%
   mutate(is_ocean = str_detect(lga, "^ocean"),
          label = lga %>%
@@ -123,13 +155,87 @@ melb_lga %>%
   labs(x = NULL, 
        y = "Daily confirmed cases excluding overseas",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_vic_lga.png"),
+ggsave(glue("plots/{Sys.Date()}/cases_melb_lga.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+```
+
+```{r}
+melb_lga %>%
+  filter(date >= "2021-09-01") %>%
+  ggplot(aes(x = date, y = confirmed_per_100k)) +
+  geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
+  geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt) +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf) +
+  facet_geo(vars(lga), grid = melb_grid) +
+  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  expand_limits(x = ymd("2021-10-02")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt")) +
+  labs(x = NULL, 
+       y = "Daily confirmed cases excluding overseas, per 100k population",
+       caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/cases_melb_lga_pop.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 
+## Regional Vic
 
+```{r}
+regional_lga <- vic_lga %>%
+  inner_join(lga_regions) %>%
+  mutate(region = str_replace(region, "Inner Melbourne|Outer Metropolitan|Metropolitan Melbourne", "Melbourne")) %>%
+  group_by(region, date) %>%
+  summarise(confirmed = sum(confirmed),
+            region_population = sum(lga_population_2021),
+            confirmed_per_100k = confirmed / region_population * 100000) %>%
+  ungroup()
+stopifnot(length(unique(regional_lga$region)) == nrow(regional_grid))
+```
 
+```{r}
+label_dat <- regional_lga %>%
+  summarise(date = ymd("2021-09-01"),
+         confirmed = max(confirmed),
+         confirmed_per_100k = max(confirmed_per_100k)) %>%
+  expand_grid(region = regional_grid$name) %>%
+  mutate(is_ocean = FALSE,
+         label = region)
+regional_lga %>%
+  filter(date >= "2021-09-01") %>%
+  ggplot(aes(x = date, y = confirmed_per_100k)) +
+  geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
+  geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt) +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf) +
+  facet_geo(vars(region), grid = regional_grid) +
+  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  expand_limits(x = ymd("2021-10-02")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt")) +
+  labs(x = NULL, 
+       y = "Daily confirmed cases excluding overseas, per 100k population",
+       caption = glue("Plot created {Sys.Date()}; most recent cases {max(vic_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
+ggsave(glue("plots/{Sys.Date()}/cases_regional_vic_pop.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+```
 
 ## Vaccination
 
@@ -168,7 +274,7 @@ vax_data <- vax_excel_files %>%
 
 vax_vic <- vax_data %>% 
   filter(state == "Victoria") %>%
-  mutate(lga = str_replace_all(lga_full, r"( \([A-Za-z.]+\))", ""))
+  mutate(lga = fix_lga(lga_full))
 vax_melb <- vax_vic %>%
   filter(lga %in% melb_grid$name)
 ```
@@ -209,7 +315,7 @@ vax_melb %>%
             ymin = 0.9, ymax = Inf,
             show.legend = FALSE) +
   geom_line(alpha = 1, size = 0.75) +
-  geom_point(size = 1.5, stroke = 0.75, alpha = 1) +
+  geom_point(size = 0.75, stroke = 0.75, alpha = 1) +
   geom_text(data = label_dat, aes(label = label),
             hjust = 0, vjust = 1,
             size = 7 / .pt,
