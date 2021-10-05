@@ -25,6 +25,7 @@ knitr::opts_chunk$set(
 ```{r packages}
 library(tidyverse)
 library(lubridate)
+library(here)
 library(glue)
 library(gt)
 library(mgcv)
@@ -52,12 +53,18 @@ theme_set(
 plot_start_date <- "2021-09-01"
 ```
 
+```{r}
+plot_file <- function(base) {
+  here("output", "plots", Sys.Date(), base)
+}
+```
+
 ## Data import
 
 ### Raw case numbers
 
 ```{r load-data}
-data_file <- last(sort(Sys.glob("covid19_aus_munged_*.Rds")))
+data_file <- last(sort(Sys.glob(here("data", "cases", "covid19_aus_munged_*.Rds"))))
 cat("Latest data file:", data_file, "\n")
 covid19_aus_munged <- readRDS(data_file)
 ```
@@ -75,13 +82,13 @@ covid19_aus_munged %>%
 ```
 
 ```{r}
-fs::dir_create(glue("plots/{Sys.Date()}"))
+fs::dir_create(here("output", "plots", Sys.Date()))
 ```
 
 ### EpiNow2 estimates
 
 ```{r load-epinow-data}
-data_file <- last(sort(Sys.glob("estimates_aus_*.Rds")))
+data_file <- last(sort(Sys.glob(here("output", "epinow", "estimates_aus_*.Rds"))))
 cat("Latest data file:", data_file, "\n")
 estimates_aus <- readRDS(data_file)
 ```
@@ -176,7 +183,7 @@ pred_int %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "GAM model for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the mgcv R package.\nBands are 20%, 50%, 90% parametric bootstrap prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_gam_mgcv.png"),
+ggsave(plot_file("cases_gam_mgcv.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -269,7 +276,7 @@ pred_int_brm %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "Bayesian GAM for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using a negative binomial Generalised Additive Model, fitted with the brms R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(covid19_aus_munged$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_gam_brms.png"),
+ggsave(plot_file("cases_gam_brms.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -307,7 +314,7 @@ est_cases %>%
   labs(x = NULL, y = "Daily confirmed cases excluding overseas",
        title = "EpiNow2 model for Covid cases in selected Australian states and New Zealand",
        caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior prediction intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_epinow.png"),
+ggsave(plot_file("cases_epinow.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -327,7 +334,7 @@ est_R %>%
   labs(x = NULL, y = "Estimated effective reproduction number (Reff)",
        title = "Estimated Reff in selected Australian states and New Zealand",
        caption = glue("Estimated using EpiNow2 R package.\nBands are 20%, 50%, 90% posterior credible intervals. Plot created {Sys.Date()}; most recent cases {max(case_data$date)}.\nData: github.com/pappubahry/AU_COVID19 and NZ Health. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/reff_epinow.png"),
+ggsave(plot_file("reff_epinow.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 

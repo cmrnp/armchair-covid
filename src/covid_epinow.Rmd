@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 EpiNow model fitting"
 author: "Cameron Patrick"
-date: "3 October 2021"
+date: "5 October 2021"
 output: 
   html_document:
     toc: true
@@ -23,21 +23,23 @@ knitr::opts_chunk$set(
 ## Load R packages
 
 <!--
-remotes::install_github("epiforecasts/EpiNow2")
+To obtain latest EpiNow2:
+  remotes::install_github("epiforecasts/EpiNow2")
 -->
 
 ```{r packages, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(lubridate)
 library(glue)
+library(here)
 library(EpiNow2)
 ```
 
 ## Read data file
 
 ```{r}
-data_file <- last(sort(Sys.glob("covid19_aus_munged_*.Rds")))
-print(data_file)
+data_file <- last(sort(Sys.glob(here("data", "cases", "covid19_aus_munged_*.Rds"))))
+cat("Latest case data:", data_file, "\n")
 covid19_aus_munged <- readRDS(data_file)
 ```
 
@@ -82,7 +84,7 @@ run_state_epinow <- function(state, dat) {
   cat("Latest observation:", as.character(last_date), "\n")
   
   # find last saved data
-  saved_data <- Sys.glob(glue("estimates_{state}_*.Rds"))
+  saved_data <- Sys.glob(here("output", "epinow", glue("estimates_{state}_*.Rds")))
   if (length(saved_data) > 0) {
     last_save <- last(sort(saved_data))
     last_save_date <- str_match(last_save, "_([0-9-]+)\\.Rds$")[, 2]
@@ -110,7 +112,7 @@ run_state_epinow <- function(state, dat) {
     verbose = TRUE
   )
   cat("Model fitting completed at time:", as.character(Sys.time()), "\n")
-  saveRDS(estimates, glue("estimates_{state}_{last_date}.Rds"))
+  saveRDS(estimates, here("output", "epinow", glue("estimates_{state}_{last_date}.Rds")))
   invisible(estimates)
 }
 ```
@@ -127,7 +129,7 @@ aus_models <- dat_aus %>%
 Save full output:
 
 ```{r}
-saveRDS(aus_models, glue("estimates_aus_{Sys.Date()}.Rds"))
+saveRDS(aus_models, here("output", "epinow", glue("estimates_aus_{Sys.Date()}.Rds")))
 ```
 
 ## Quick plots

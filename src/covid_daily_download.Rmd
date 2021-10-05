@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 daily data download"
 author: "Cameron Patrick"
-date: "4 October 2021"
+date: "5 October 2021"
 output: 
   html_document:
     toc: true
@@ -23,13 +23,16 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(lubridate)
 library(glue)
+library(here)
 library(gt)
 ```
 
-## Sanity check output file
+## Check output file
 
 ```{r}
-rds_file <- glue("covid19_aus_munged_{Sys.Date()}.Rds")
+rds_file <- here("data", "cases", 
+                 glue("covid19_aus_munged_{Sys.Date()}.Rds"))
+cat("Daily output file:", rds_file, "\n")
 ```
 
 ## Data download

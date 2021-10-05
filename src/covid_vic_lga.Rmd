@@ -27,6 +27,7 @@ library(tidyverse)
 library(readxl)
 library(janitor)
 library(lubridate)
+library(here)
 library(glue)
 library(gt)
 library(mgcv)
@@ -53,6 +54,12 @@ theme_set(
 plot_start_date <- "2021-09-01"
 ```
 
+```{r}
+plot_file <- function(base) {
+  here("output", "plots", Sys.Date(), base)
+}
+```
+
 ## Data import
 
 Note, data obtained from:
@@ -71,21 +78,21 @@ fix_lga <- function(lga_full) {
 
 
 ```{r load-data}
-data_file <- last(sort(Sys.glob("LGA/NCOV_COVID_Cases_by_LGA_Source_*.csv")))
+data_file <- last(sort(Sys.glob(here("data", "cases_LGA", "NCOV_COVID_Cases_by_LGA_Source_*.csv"))))
 cat("Latest data file:", data_file, "\n")
 vic_lga_orig <- read_csv(data_file)
 ```
 
 ```{r}
-melb_grid <- read_csv("melb_LGA_grid.csv")
-lga_regions <- read_csv("LGA_regions.csv") %>%
+melb_grid <- read_csv(here("data", "LGA", "melb_LGA_grid.csv"))
+lga_regions <- read_csv(here("data", "LGA", "LGA_regions.csv")) %>%
   select(lga = LGA, region = Region) %>%
   mutate(lga = str_to_title(lga))
-regional_grid <- read_csv("regional_grid.csv")
+regional_grid <- read_csv(here("data", "LGA", "regional_grid.csv"))
 ```
 
 ```{r}
-lga_pop_data_orig <- read_xlsx("VIF2019_Population_Service_Ages_LGA_2036.xlsx", sheet = "Age Sex", skip = 11)
+lga_pop_data_orig <- read_xlsx(here("data", "LGA", "VIF2019_Population_Service_Ages_LGA_2036.xlsx"), sheet = "Age Sex", skip = 11)
 lga_pop_data <- lga_pop_data_orig %>%
   clean_names() %>%
   remove_empty() %>%
@@ -107,7 +114,7 @@ vic_lga <- vic_lga_orig %>%
 ```
 
 ```{r}
-fs::dir_create(glue("plots/{Sys.Date()}"))
+fs::dir_create(here("output", "plots", Sys.Date()))
 ```
 
 
@@ -155,7 +162,7 @@ melb_lga %>%
   labs(x = NULL, 
        y = "Daily confirmed cases excluding overseas",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_melb_lga.png"),
+ggsave(plot_file("cases_melb_lga.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -183,7 +190,7 @@ melb_lga %>%
   labs(x = NULL, 
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_melb_lga_pop.png"),
+ggsave(plot_file("cases_melb_lga_pop.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -233,7 +240,7 @@ regional_lga %>%
   labs(x = NULL, 
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(vic_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/cases_regional_vic_pop.png"),
+ggsave(plot_file("cases_regional_vic_pop.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
@@ -241,7 +248,7 @@ ggsave(glue("plots/{Sys.Date()}/cases_regional_vic_pop.png"),
 
 ```{r}
 vax_excel_files <- tibble(
-  path = Sys.glob("vax_LGA/*.xlsx"),
+  path = Sys.glob(here("data", "vax_LGA", "*.xlsx")),
   date = path %>%
     str_extract("[0-9]{1,2}-[a-z]+-[0-9]{4}") %>%
     str_replace_all("-", " ") %>%
@@ -348,7 +355,7 @@ vax_melb %>%
   labs(x = NULL, 
        y = "Percentage of LGA population vaccinated",
        caption = glue("Plot created {Sys.Date()}; most recent data {max(vax_melb$date)}. Data: Australian Dept of Health. Code: github.com/cmrnp/armchair-covid"))
-ggsave(glue("plots/{Sys.Date()}/vax_melb_lga.png"),
+ggsave(plot_file("vax_melb_lga.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 
 ```
