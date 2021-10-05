@@ -1,3 +1,5 @@
 output/epinow/*
+output/html/covid_daily_download_*.html
+output/html/covid_epinow_2021-*.html
 src/*.html
 .Rproj.user
