@@ -1,2 +1,3 @@
-estimates_*.Rds
-/*.html
+output/epinow/*
+src/*.html
+.Rproj.user
