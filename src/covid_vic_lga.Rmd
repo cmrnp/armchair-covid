@@ -166,6 +166,10 @@ label_dat <- melb_lga %>%
            str_replace("^Greater ", "Gtr. ") %>%
            str_replace("Mornington Peninsula", "Morn. Pen.") %>%
            str_replace("^ocean.*", ""))
+```
+
+
+```{r}
 melb_lga %>%
   ggplot(aes(x = date, y = confirmed)) +
   geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
@@ -384,6 +388,73 @@ vax_melb %>%
 ggsave(plot_file("vax_melb_lga.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 
+```
+
+## Metro Melb, coloured by vax %
+
+```{r}
+vax_latest_lga <- vax_vic %>%
+  filter(date == max(date), dose == "dose_1") %>%
+  select(lga, vax_prop = prop)
+```
+
+```{r}
+label_dat <- melb_lga %>%
+  summarise(date = min(date),
+            confirmed = max(confirmed),
+            confirmed_per_100k = max(confirmed_per_100k)) %>%
+  expand_grid(lga = melb_grid$name) %>%
+  left_join(vax_latest_lga) %>%
+  mutate(is_ocean = str_detect(lga, "^ocean"),
+#         label = glue("{lga}\n({round(100*vax_prop)}% vax.)") %>%
+         label = lga %>%
+           str_replace("^Greater ", "Gtr. ") %>%
+           str_replace("Mornington Peninsula", "Morn. Pen.") %>%
+           str_replace("^ocean.*", ""))
+```
+
+```{r}
+vax_cols <- RColorBrewer::brewer.pal(6, "RdYlGn")
+vax_cols_dark <- colorspace::darken(vax_cols, 0.2)
+melb_lga %>%
+  left_join(vax_latest_lga) %>%
+  ggplot(aes(x = date, y = confirmed_per_100k, colour = vax_prop)) +
+  stat_smooth(method = "gam", se = FALSE, colour = "grey60", data = melb_overall, geom = "line", size = 2, alpha = 0.4) +
+  stat_smooth(method = "gam", se = FALSE, geom = "line",
+              size = 2, alpha = 0.4) +
+  geom_point(pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt,
+            colour = "black") +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf) +
+  facet_geo(vars(lga), grid = melb_grid) +
+  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
+  scale_colour_stepsn(breaks = seq(0.65, 0.95, by = 0.05),
+                      limits = c(0.65, 0.95),
+                      labels = scales::label_percent(accuracy = 1),
+                      colours = vax_cols_dark,
+                      guide = guide_coloursteps(show.limits = TRUE, direction = "horizontal", title.position = "top", barwidth = unit(144, "pt"), barheight = unit(11, "pt"))) +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  expand_limits(x = ymd("2021-10-02")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt"),
+        legend.position = c(1, 0),
+        legend.justification = c(1, 0),
+        legend.text = element_text(size = rel(7/11)),
+        legend.title = element_text(size = rel(7/11)),
+        legend.margin = margin(0, 5.5, 0, 5.5, "pt")) +
+  labs(colour = "% vaccinated (single dose)",
+       x = NULL, 
+       y = "Daily confirmed cases excluding overseas, per 100k population",
+       caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
+ggsave(plot_file("cases_melb_lga_pop_vax.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ## R session info
