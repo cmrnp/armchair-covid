@@ -176,7 +176,7 @@ pred_int %>%
   geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
   geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   expand_limits(y = 0) +
-  expand_limits(x = ymd("2021-10-02")) +
+  expand_limits(x = ymd("2021-10-16")) +
   facet_wrap(~state_full, scale = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
   scale_x_date(date_labels = "%e %b") +
@@ -269,7 +269,7 @@ pred_int_brm %>%
   geom_ribbon(aes(ymin = lower20, ymax = upper20), alpha = 0.6) +
   geom_point(aes(y = daily_confirmed), colour = "chartreuse4", pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   expand_limits(y = 0) +
-  expand_limits(x = ymd("2021-10-02")) +
+  expand_limits(x = ymd("2021-10-16")) +
   facet_wrap(~state_full, scale = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "firebrick3")) +
   scale_x_date(date_labels = "%e %b") +
@@ -306,7 +306,7 @@ est_cases %>%
   geom_ribbon(aes(ymin = lower_20, ymax = upper_20), alpha = 0.6, colour = NA) +
   geom_point(aes(y = confirm), pch = 1, size = 0.75, stroke = 0.75, alpha = 0.8) +
   expand_limits(y = 0) +
-  expand_limits(x = ymd("2021-10-02")) +
+  expand_limits(x = ymd("2021-10-16")) +
   facet_wrap(~state_full, scales = "free_y") +
   scale_fill_manual(values = c("chartreuse3", "goldenrod3", "firebrick3")) +
   scale_colour_manual(values = c("chartreuse4", "goldenrod4", "firebrick4")) +
