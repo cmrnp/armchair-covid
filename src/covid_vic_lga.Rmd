@@ -71,6 +71,21 @@ Vaccination data from: <https://www.health.gov.au/resources/collections/covid-19
 LGA population data from: <https://www.planning.vic.gov.au/land-use-and-population-research/victoria-in-future>
 
 ```{r}
+#cases_file_date <- ymd("2021-10-07")
+cases_file_date <- Sys.Date()
+
+cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}.csv")
+cases_file_path <- here("data", "cases_LGA", cases_file_name)
+cases_file_url <- glue("https://www.dhhs.vic.gov.au/sites/default/files/documents/{strftime(cases_file_date, '%Y%m')}/{cases_file_name}")
+if (fs::file_exists(cases_file_path)) {
+  cat("Latest case file", cases_file_name, "exists.\n")
+} else {
+  curl::curl_download(cases_file_url, cases_file_path, quiet = TRUE)
+}
+```
+
+
+```{r}
 fix_lga <- function(lga_full) {
   str_replace_all(lga_full, r"( \([A-Za-z.]+\))", "")
 }
@@ -124,15 +139,27 @@ fs::dir_create(here("output", "plots", Sys.Date()))
 
 ```{r}
 melb_lga <- vic_lga %>%
+  filter(date >= "2021-09-01") %>%
   filter(lga %in% melb_grid$name)
 stopifnot(length(unique(melb_lga$lga)) == nrow(filter(melb_grid, !str_detect(name, "^ocean"))))
 ```
 
 ```{r}
+melb_overall <- melb_lga %>%
+  group_by(date) %>%
+  summarise(confirmed = sum(confirmed),
+            lga_population_2021 = sum(lga_population_2021),
+            confirmed_per_100k = confirmed / lga_population_2021 * 100000) %>%
+  ungroup() %>%
+  expand_grid(lga = melb_grid$name)
+```
+
+
+```{r}
 label_dat <- melb_lga %>%
-  summarise(date = ymd("2021-09-01"),
-         confirmed = max(confirmed),
-         confirmed_per_100k = max(confirmed_per_100k)) %>%
+  summarise(date = min(date),
+            confirmed = max(confirmed),
+            confirmed_per_100k = max(confirmed_per_100k)) %>%
   expand_grid(lga = melb_grid$name) %>%
   mutate(is_ocean = str_detect(lga, "^ocean"),
          label = lga %>%
@@ -140,7 +167,6 @@ label_dat <- melb_lga %>%
            str_replace("Mornington Peninsula", "Morn. Pen.") %>%
            str_replace("^ocean.*", ""))
 melb_lga %>%
-  filter(date >= "2021-09-01") %>%
   ggplot(aes(x = date, y = confirmed)) +
   geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
   geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
@@ -168,8 +194,8 @@ ggsave(plot_file("cases_melb_lga.png"),
 
 ```{r}
 melb_lga %>%
-  filter(date >= "2021-09-01") %>%
   ggplot(aes(x = date, y = confirmed_per_100k)) +
+  geom_smooth(method = "gam", se = FALSE, colour = "grey80", alpha = 0.3, data = melb_overall) +
   geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
   geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
   geom_text(data = label_dat, aes(label = label),
@@ -189,7 +215,7 @@ melb_lga %>%
         panel.spacing = unit(2, "pt")) +
   labs(x = NULL, 
        y = "Daily confirmed cases excluding overseas, per 100k population",
-       caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
+       caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_melb_lga_pop.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
