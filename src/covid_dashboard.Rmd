@@ -1,0 +1,85 @@
+---
+title: "Australia/New Zealand Covid case tracker"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    navbar:
+      - { title: Author, href: "https://twitter.com/camjpatrick" }
+      - { title: Source, href: "https://github.com/cmrnp/armchair-covid" }
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  out.width = "100%",
+  dpi = 150,
+  fig.retina = 2
+)
+
+library(here)
+```
+
+```{r}
+plot_file <- function(base, today = Sys.Date()) {
+  here("output", "plots", today, base)
+}
+```
+
+# Outbreak states and New Zealand
+
+## Case numbers {.tabset}
+
+### Generalised additive model
+
+```{r}
+knitr::include_graphics(plot_file("cases_gam_brms.png"))
+```
+
+### EpiNow2
+
+```{r}
+knitr::include_graphics(plot_file("cases_epinow.png"))
+```
+
+## Reff
+
+### EpiNow2
+
+```{r}
+knitr::include_graphics(plot_file("reff_epinow.png"))
+```
+
+# Melbourne by LGA
+
+## Population-adjusted {.tabset}
+
+### With vaccination proportion over time
+
+```{r}
+knitr::include_graphics(plot_file("cases_melb_lga_pop_vax_2.png"))
+```
+
+### With latest vaccination proportion
+
+```{r}
+knitr::include_graphics(plot_file("cases_melb_lga_pop_vax.png"))
+```
+
+### Case numbers (population-adjusted)
+
+```{r}
+knitr::include_graphics(plot_file("cases_melb_lga_pop.png"))
+```
+
+### Case numbers (unadjusted)
+
+```{r}
+knitr::include_graphics(plot_file("cases_melb_lga.png"))
+```
+
+# Regional Victoria
+
+```{r}
+knitr::include_graphics(plot_file("cases_regional_vic_pop.png"))
+```

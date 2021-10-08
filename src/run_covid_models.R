@@ -1,13 +1,9 @@
 
-library(here)
-library(glue)
-
 do_render <- function(base, date = Sys.Date(), additional_output = NULL) {
-  src_file <- here("src", glue("{base}.Rmd"))
-  output_file <- here("output", "html", glue("{base}_{date}.html"))
+  src_file <- here::here("src", glue::glue("{base}.Rmd"))
+  output_file <- here::here("output", "html", glue::glue("{base}_{date}.html"))
   rmarkdown::render(
     input = src_file,
-    output_format = "html_document",
     output_file = output_file
   )
   if (!is.null(additional_output)) {
@@ -19,5 +15,7 @@ do_render <- function(base, date = Sys.Date(), additional_output = NULL) {
 
 do_render("covid_daily_download")
 do_render("covid_epinow")
-do_render("covid_epinow_plots", 
-          additional_output = here("docs", "index.html"))
+do_render("covid_epinow_plots")
+do_render("covid_vic_lga")
+do_render("covid_dashboard", 
+          additional_output = here::here("docs", "index.html"))
