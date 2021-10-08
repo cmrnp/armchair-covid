@@ -52,7 +52,7 @@ knitr::include_graphics(plot_file("reff_epinow.png"))
 
 # Melbourne by LGA
 
-## Population-adjusted {.tabset}
+## Case time series {.tabset}
 
 ### With vaccination proportion over time
 
@@ -76,6 +76,16 @@ knitr::include_graphics(plot_file("cases_melb_lga_pop.png"))
 
 ```{r}
 knitr::include_graphics(plot_file("cases_melb_lga.png"))
+```
+
+# Sydney by LGA
+
+## Case time series {.tabset}
+
+### Case numbers (population-adjusted)
+
+```{r}
+knitr::include_graphics(plot_file("cases_syd_lga_pop.png"))
 ```
 
 # Regional Victoria

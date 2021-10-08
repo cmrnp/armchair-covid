@@ -71,8 +71,8 @@ Vaccination data from: <https://www.health.gov.au/resources/collections/covid-19
 LGA population data from: <https://www.planning.vic.gov.au/land-use-and-population-research/victoria-in-future>
 
 ```{r}
-#cases_file_date <- ymd("2021-10-07")
-cases_file_date <- Sys.Date()
+cases_file_date <- ymd("2021-10-07")
+#cases_file_date <- Sys.Date()
 
 cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}.csv")
 cases_file_path <- here("data", "cases_LGA", cases_file_name)
@@ -83,7 +83,6 @@ if (fs::file_exists(cases_file_path)) {
   curl::curl_download(cases_file_url, cases_file_path, quiet = TRUE)
 }
 ```
-
 
 ```{r}
 fix_lga <- function(lga_full) {
@@ -98,12 +97,21 @@ cat("Latest data file:", data_file, "\n")
 vic_lga_orig <- read_csv(data_file)
 ```
 
+
+```{r}
+nsw_lga_orig <- read_csv("https://data.nsw.gov.au/data/dataset/97ea2424-abaf-4f3e-a9f2-b5c883f42b6a/resource/2776dbb8-f807-4fb2-b1ed-184a6fc2c8aa/download/confirmed_cases_table4_location_likely_source.csv")
+write_csv(nsw_lga_orig, here("data", "cases_LGA", glue("nsw_lga_{strftime(max(nsw_lga_orig$notification_date), '%Y%m%d')}.csv")))
+```
+
+
 ```{r}
 melb_grid <- read_csv(here("data", "LGA", "melb_LGA_grid.csv"))
 lga_regions <- read_csv(here("data", "LGA", "LGA_regions.csv")) %>%
   select(lga = LGA, region = Region) %>%
   mutate(lga = str_to_title(lga))
 regional_grid <- read_csv(here("data", "LGA", "regional_grid.csv"))
+
+syd_grid <- read_csv(here("data", "LGA", "syd_LGA_grid.csv"))
 ```
 
 ```{r}
@@ -115,6 +123,14 @@ lga_pop_data <- lga_pop_data_orig %>%
   mutate(lga = fix_lga(lga_full))
 ```
 
+```{r}
+nsw_lga_pop_data_orig <- read_xlsx(here("data", "LGA", "2019 NSW Population Projections ASGS 2019 LGA.xlsx"), sheet = "LGA population projections", skip = 5)
+nsw_lga_pop_data <- nsw_lga_pop_data_orig %>%
+  clean_names() %>%
+  select(lga_full = asgs_2019_lga, lga_population_2021 = x2021) %>%
+  filter(lga_full != "NSW Total", !is.na(lga_population_2021)) %>%
+  mutate(lga = fix_lga(lga_full))
+```
 
 ```{r}
 vic_lga <- vic_lga_orig %>%
@@ -125,6 +141,18 @@ vic_lga <- vic_lga_orig %>%
   complete(lga_full, date, fill = list(confirmed = 0)) %>%
   mutate(lga = fix_lga(lga_full)) %>%
   left_join(select(lga_pop_data, lga, lga_population_2021)) %>%
+  mutate(confirmed_per_100k = confirmed / lga_population_2021 * 100000)
+```
+
+```{r}
+nsw_lga <- nsw_lga_orig %>%
+  filter(likely_source_of_infection != "Overseas") %>%
+  group_by(lga_full = lga_name19, date = notification_date) %>%
+  summarise(confirmed = n()) %>%
+  ungroup() %>%
+  complete(lga_full, date, fill = list(confirmed = 0)) %>%
+  mutate(lga = fix_lga(lga_full)) %>%
+  left_join(select(nsw_lga_pop_data, lga, lga_population_2021)) %>%
   mutate(confirmed_per_100k = confirmed / lga_population_2021 * 100000)
 ```
 
@@ -529,6 +557,68 @@ ggsave(plot_file("cases_melb_lga_pop_vax_2.png"),
        width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
+## Metro Sydney
+
+```{r}
+syd_lga <- nsw_lga %>%
+  filter(date >= "2021-08-01") %>%
+  filter(lga %in% syd_grid$name)
+stopifnot(length(unique(syd_lga$lga)) == nrow(filter(syd_grid, !str_detect(name, "^ocean"))))
+```
+
+```{r}
+syd_overall <- syd_lga %>%
+  group_by(date) %>%
+  summarise(confirmed = sum(confirmed),
+            lga_population_2021 = sum(lga_population_2021),
+            confirmed_per_100k = confirmed / lga_population_2021 * 100000) %>%
+  ungroup() %>%
+  expand_grid(lga = syd_grid$name)
+```
+
+
+```{r}
+label_dat <- syd_lga %>%
+  summarise(date = min(date),
+            confirmed = max(confirmed),
+            confirmed_per_100k = max(confirmed_per_100k)) %>%
+  expand_grid(lga = syd_grid$name) %>%
+  mutate(is_ocean = str_detect(lga, "^ocean"),
+         label = lga %>%
+           str_replace("^Greater ", "Gtr. ") %>%
+           str_replace("Mornington Peninsula", "Morn. Pen.") %>%
+           str_replace("Canterbury-Bankstown", "C'bury-B'town") %>%
+           str_replace("^ocean.*", ""))
+```
+
+
+```{r}
+syd_lga %>%
+  ggplot(aes(x = date, y = confirmed_per_100k)) +
+  geom_smooth(method = "gam", se = FALSE, colour = "grey80", alpha = 0.3, data = syd_overall) +
+  geom_smooth(method = "gam", se = FALSE, colour = "chartreuse3", alpha = 0.3) +
+  geom_point(colour = "chartreuse4", pch = 1, size = 0.5, stroke = 0.5, alpha = 1) +
+  geom_text(data = label_dat, aes(label = label),
+            hjust = 0, vjust = 1,
+            size = 7 / .pt) +
+  geom_rect(data = filter(label_dat, is_ocean),
+            fill = "lightskyblue", 
+            xmin = -Inf, xmax = Inf,
+            ymin = -Inf, ymax = Inf) +
+  facet_geo(vars(lga), grid = syd_grid) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  #scale_x_date(date_labels = "%e %b", breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01"))) +
+  #expand_limits(x = ymd("2021-10-02")) +
+  theme(strip.text = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "grey60"),
+        panel.spacing = unit(2, "pt")) +
+  labs(x = NULL, 
+       y = "Daily confirmed cases excluding overseas, per 100k population",
+       caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(syd_lga$date)}. Data: NSW Health. Code: github.com/cmrnp/armchair-covid"))
+ggsave(plot_file("cases_syd_lga_pop.png"),
+       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+```
 
 ## R session info
 

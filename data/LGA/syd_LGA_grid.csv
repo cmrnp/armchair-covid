@@ -1,0 +1,45 @@
+row,col,code,name
+1,3,HILL,The Hills Shire
+1,4,HORN,Hornsby
+1,5,KURI,Ku-ring-gai
+1,6,NORB,Northern Beaches
+1,7,CENT,Central Coast
+2,1,HAWK,Hawkesbury
+2,3,PARR,Parramatta
+2,4,RYDE,Ryde
+2,5,LANE,Lane Cove
+2,6,WILL,Willoughby
+2,7,MOSM,Mosman
+3,1,BLUE,Blue Mountains
+3,3,STRA,Strathfield
+3,4,CANA,Canada Bay
+3,5,HUNT,Hunters Hill
+3,6,NORS,North Sydney
+3,7,OCE1,ocean1
+4,1,PENR,Penrith
+4,2,BLAC,Blacktown
+4,3,CUMB,Cumberland
+4,4,BURW,Burwood
+4,5,INNW,Inner West
+4,6,SYDN,Sydney
+4,7,WOOL,Woollahra
+5,2,FAIR,Fairfield
+5,3,CANT,Canterbury-Bankstown
+5,4,OCE2,ocean2
+5,5,BAYS,Bayside
+5,6,OCE3,ocean3
+5,7,WAVE,Waverley
+6,1,CAMD,Camden
+6,2,LIVE,Liverpool
+6,3,GEOR,Georges River
+6,4,OCE4,ocean4
+6,5,OCE5,ocean5
+6,6,OCE6,ocean6
+6,7,RAND,Randwick
+7,1,WOLL,Wollondilly
+7,2,CAMP,Campbelltown
+7,3,SUTH,Sutherland Shire
+7,4,GONG,Wollongong
+7,5,OCE7,ocean7
+7,6,OCE8,ocean8
+7,7,OCE9,ocean9
