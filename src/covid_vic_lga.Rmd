@@ -495,7 +495,8 @@ melb_lga %>%
             xmin = -Inf, xmax = Inf,
             ymin = -Inf, ymax = Inf) +
   facet_geo(vars(lga), grid = melb_grid) +
-  scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks",
+  scale_x_date(date_labels = "%e %b",
+               breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01")),
                limits = c(min(melb_lga$date) - 2, max(melb_lga$date) + 2),
                expand = expansion(0)) +
   scale_fill_stepsn(#breaks = seq(0.4, 0.95, by = 0.05),
