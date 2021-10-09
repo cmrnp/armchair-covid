@@ -1,5 +1,7 @@
 output/epinow/*
 output/html/covid_daily_download_*.html
 output/html/covid_epinow_2021-*.html
+output/html/covid_epinow_plots_*.html
+output/html/covid_vic_lga_*.html
 src/*.html
 .Rproj.user
