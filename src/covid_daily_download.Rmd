@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 daily data download"
 author: "Cameron Patrick"
-date: "7 October 2021"
+date: "9 October 2021"
 output: 
   html_document:
     toc: true
@@ -42,8 +42,8 @@ Aus data from: <https://github.com/pappubahry/AU_COVID19>
 Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
 
 ```{r data-download, warning = FALSE, message = FALSE}
-#nz_url_date <- "2021-10-07"
-nz_url_date <- Sys.Date()
+nz_url_date <- "2021-10-09_0"
+#nz_url_date <- Sys.Date()
 
 covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
 covid19_nsw <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_nsw_sources.csv")
@@ -56,26 +56,6 @@ covid19_nz <- read_csv(glue("https://www.health.govt.nz/system/files/documents/p
 ```{r}
 extra_info <- tribble(
   ~state, ~date, ~daily_confirmed,
-  "VIC", "2021-09-11", 392,
-  "VIC", "2021-09-12", 473,
-  "VIC", "2021-09-13", 445,
-  "VIC", "2021-09-14", 423,
-  "VIC", "2021-09-15", 514,
-  "VIC", "2021-09-16", 510,
-  "VIC", "2021-09-17", 535,
-  "VIC", "2021-09-18", 507,
-  "VIC", "2021-09-19", 567,
-  "VIC", "2021-09-20", 603,
-  "VIC", "2021-09-21", 628,
-  "VIC", "2021-09-22", 766,
-  "VIC", "2021-09-23", 733,
-  "VIC", "2021-09-24", 847,
-  "VIC", "2021-09-25", 779 + 9,
-  "VIC", "2021-09-26", 705 + 140,
-  "VIC", "2021-09-27", 867,
-  "VIC", "2021-09-28", 950,
-  "VIC", "2021-09-29", 1438,
-  "VIC", "2021-09-30", 1143,
   "VIC", "2021-10-01", 1488,
   "VIC", "2021-10-02", 1220,
   "VIC", "2021-10-03", 1377,
@@ -83,27 +63,8 @@ extra_info <- tribble(
   "VIC", "2021-10-05", 1420,
   "VIC", "2021-10-06", 1638,
   "VIC", "2021-10-07", 1838,
-  "NSW", "2021-09-10", 1599,
-  "NSW", "2021-09-11", 1262,
-  "NSW", "2021-09-12", 1257,
-  "NSW", "2021-09-13", 1127,
-  "NSW", "2021-09-14", 1259,
-  "NSW", "2021-09-15", 1351,
-  "NSW", "2021-09-16", 1284,
-  "NSW", "2021-09-17", 1331,
-  "NSW", "2021-09-18", 1083,
-  "NSW", "2021-09-19", 935,
-  "NSW", "2021-09-20", 1022,
-  "NSW", "2021-09-21", 1035,
-  "NSW", "2021-09-22", 1063,
-  "NSW", "2021-09-23", 1043,
-  "NSW", "2021-09-24", 1007,
-  "NSW", "2021-09-25", 961,
-  "NSW", "2021-09-26", 787,
-  "NSW", "2021-09-27", 863,
-  "NSW", "2021-09-28", 863,
-  "NSW", "2021-09-29", 941,
-  "NSW", "2021-09-30", 864,
+  "VIC", "2021-10-08", 1965,
+  
   "NSW", "2021-10-01", 813,
   "NSW", "2021-10-02", 667,
   "NSW", "2021-10-03", 623,
@@ -111,26 +72,8 @@ extra_info <- tribble(
   "NSW", "2021-10-05", 594,
   "NSW", "2021-10-06", 587,
   "NSW", "2021-10-07", 646,
-  "ACT", "2021-09-11", 15,
-  "ACT", "2021-09-12", 13,
-  "ACT", "2021-09-13", 22,
-  "ACT", "2021-09-14", 13,
-  "ACT", "2021-09-15", 15,
-  "ACT", "2021-09-16", 30,
-  "ACT", "2021-09-17", 15,
-  "ACT", "2021-09-18", 17,
-  "ACT", "2021-09-19", 7,
-  "ACT", "2021-09-20", 16,
-  "ACT", "2021-09-21", 17,
-  "ACT", "2021-09-22", 16,
-  "ACT", "2021-09-23", 19,
-  "ACT", "2021-09-24", 32,
-  "ACT", "2021-09-25", 25,
-  "ACT", "2021-09-26", 19,
-  "ACT", "2021-09-27", 13,
-  "ACT", "2021-09-28", 22,
-  "ACT", "2021-09-29", 31,
-  "ACT", "2021-09-30", 52,
+  "NSW", "2021-10-08", 580,
+  
   "ACT", "2021-10-01", 52,
   "ACT", "2021-10-02", 38,
   "ACT", "2021-10-03", 28,
@@ -138,6 +81,7 @@ extra_info <- tribble(
   "ACT", "2021-10-05", 28,
   "ACT", "2021-10-06", 41,
   "ACT", "2021-10-07", 40,
+  "ACT", "2021-10-08", 25,
 ) %>%
   mutate(date = ymd(date))
 ```
