@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
   comment = NA,
-  fig.width = 7,
+  fig.width = 9,
   fig.height = 6,
   dpi = 130,
   fig.retina = 2,
@@ -71,10 +71,10 @@ Vaccination data from: <https://www.health.gov.au/resources/collections/covid-19
 LGA population data from: <https://www.planning.vic.gov.au/land-use-and-population-research/victoria-in-future>
 
 ```{r}
-cases_file_date <- ymd("2021-10-10")
+cases_file_date <- ymd("2021-10-11")
 #cases_file_date <- Sys.Date()
 
-cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}_V2.csv")
+cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}.csv")
 cases_file_path <- here("data", "cases_LGA", cases_file_name)
 cases_file_url <- glue("https://www.dhhs.vic.gov.au/sites/default/files/documents/{strftime(cases_file_date, '%Y%m')}/{cases_file_name}")
 if (fs::file_exists(cases_file_path)) {
@@ -221,7 +221,7 @@ melb_lga %>%
        y = "Daily confirmed cases excluding overseas",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_melb_lga.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ```{r}
@@ -249,7 +249,7 @@ melb_lga %>%
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_melb_lga_pop.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 
@@ -299,7 +299,7 @@ regional_lga %>%
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Plot created {Sys.Date()}; most recent cases {max(vic_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_regional_vic_pop.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ## Vaccination
@@ -414,7 +414,7 @@ vax_melb %>%
        y = "Percentage of LGA population vaccinated",
        caption = glue("Plot created {Sys.Date()}; most recent data {max(vax_melb$date)}. Data: Australian Dept of Health. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("vax_melb_lga.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 
 ```
 
@@ -482,7 +482,7 @@ melb_lga %>%
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_melb_lga_pop_vax.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 
@@ -554,7 +554,7 @@ melb_lga %>%
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_melb_lga_pop_vax_2.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ## Metro Sydney
@@ -617,7 +617,7 @@ syd_lga %>%
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(syd_lga$date)}. Data: NSW Health. Code: github.com/cmrnp/armchair-covid"))
 ggsave(plot_file("cases_syd_lga_pop.png"),
-       width = 7, height = 6, dpi = 400, dev = ragg::agg_png)
+       width = 9, height = 6, dpi = 400, dev = ragg::agg_png)
 ```
 
 ## R session info
