@@ -449,8 +449,8 @@ melb_lga %>%
             ymin = -Inf, ymax = Inf) +
   facet_geo(vars(lga), grid = melb_grid) +
   scale_x_date(date_labels = "%e %b", date_breaks = "2 weeks") +
-  scale_colour_stepsn(breaks = seq(0.65, 0.95, by = 0.05),
-                      limits = c(0.65, 0.95),
+  scale_colour_stepsn(breaks = seq(0.70, 1.00, by = 0.05),
+                      limits = c(0.70, 1.00),
                       labels = scales::label_percent(accuracy = 1),
                       colours = vax_cols_dark,
                       guide = guide_coloursteps(show.limits = TRUE, direction = "horizontal", title.position = "top", barwidth = unit(144, "pt"), barheight = unit(11, "pt"))) +
@@ -465,7 +465,7 @@ melb_lga %>%
         legend.text = element_text(size = rel(7/11)),
         legend.title = element_text(size = rel(7/11)),
         legend.margin = margin(0, 5.5, 0, 5.5, "pt")) +
-  labs(colour = "% vaccinated (single dose)",
+  labs(colour = "Percentage vaccinated (single dose, age 16+)",
        x = NULL, 
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
@@ -537,7 +537,7 @@ melb_lga %>%
         legend.text = element_text(size = rel(7/11)),
         legend.title = element_text(size = rel(7/11)),
         legend.margin = margin(0, 5.5, 0, 5.5, "pt")) +
-  labs(fill = "% vaccinated (single dose)",
+  labs(fill = "Percentage vaccinated (single dose, age 16+)",
        x = NULL, 
        y = "Daily confirmed cases excluding overseas, per 100k population",
        caption = glue("Grey curves show metro average. Plot created {Sys.Date()}; most recent cases {max(melb_lga$date)}. Data: Vic DHHS. Code: github.com/cmrnp/armchair-covid"))
