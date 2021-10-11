@@ -304,41 +304,29 @@ ggsave(plot_file("cases_regional_vic_pop.png"),
 
 ## Vaccination
 
+Now using data from <https://vaccinedata.covid19nearme.com.au/data/geo/air_lga.csv>
+
 ```{r}
-vax_excel_files <- tibble(
-  path = Sys.glob(here("data", "vax_LGA", "*.xlsx")),
-  date = path %>%
-    str_extract("[0-9]{1,2}-[a-z]+-[0-9]{4}") %>%
-    str_replace_all("-", " ") %>%
-    dmy()
-) %>%
-  arrange(date) %>%
-  rowwise() %>%
-  mutate(data = list(read_xlsx(path, skip = 8, na = c("", "N/A"))))
+vax_data_orig <- read_csv(here("data", "vax_LGA", "air_lga.csv"))
 ```
 
 ```{r}
-clean_vax_excel <- function(dat) {
-  dat %>%
-    clean_names() %>%
-    select(lga_full = starts_with("lga") & !contains("population"),
-           state = contains("jurisdiction") | contains("state"),
-           dose_1 = contains("dose_1"),
-           dose_2 = contains("dose_2")) %>%
-    mutate(lga_full = as.character(lga_full), 
-           across(dose_1:dose_2,
-                  ~{if(is.numeric(.)) . else as.numeric(str_replace_all(., "[%>]", ""))/100}))
-}
+vax_data <- vax_data_orig %>%
+  clean_names() %>%
+  select(state,
+         date = date_as_at,
+         lga_full = abs_name,
+         dose_1 = air_first_dose_pct,
+         dose_2 = air_second_dose_pct) %>%
+  pivot_longer(dose_1:dose_2, names_to = "dose", values_to = "prop") %>%
+  mutate(prop = prop / 100) %>%
+  mutate(prop = if_else(prop >= 0.9499, 0.951, prop))
 ```
 
-```{r}
-vax_data <- vax_excel_files %>%
-  mutate(data = list(clean_vax_excel(data))) %>%
-  unnest(data) %>%
-  pivot_longer(dose_1:dose_2, names_to = "dose", values_to = "prop")
 
+```{r}
 vax_vic <- vax_data %>% 
-  filter(state == "Victoria") %>%
+  filter(state == "VIC") %>%
   mutate(lga = fix_lga(lga_full))
 vax_melb <- vax_vic %>%
   filter(lga %in% melb_grid$name)
