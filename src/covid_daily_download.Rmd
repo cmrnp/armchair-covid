@@ -42,7 +42,7 @@ Aus data from: <https://github.com/pappubahry/AU_COVID19>
 Note NZ file has date in URL! Totals based on notification date don't seem to line up with announcements which are ~ 1pm to 1pm kiwi time. See <https://www.health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics>
 
 ```{r data-download, warning = FALSE, message = FALSE}
-nz_url_date <- "2021-10-14"
+nz_url_date <- "2021-10-15"
 #nz_url_date <- Sys.Date()
 
 covid19_vic <- read_csv("https://github.com/pappubahry/AU_COVID19/raw/master/time_series_vic_sources.csv")
@@ -69,6 +69,7 @@ extra_info <- tribble(
   "VIC", "2021-10-11", 1466,
   "VIC", "2021-10-12", 1571,
   "VIC", "2021-10-13", 2297,
+  "VIC", "2021-10-14", 2179,
   
   "NSW", "2021-10-01", 813,
   "NSW", "2021-10-02", 667,
@@ -83,6 +84,7 @@ extra_info <- tribble(
   "NSW", "2021-10-11", 360,
   "NSW", "2021-10-12", 444,
   "NSW", "2021-10-13", 406,
+  "NSW", "2021-10-14", 399,
   
   "ACT", "2021-10-01", 52,
   "ACT", "2021-10-02", 38,
@@ -97,6 +99,7 @@ extra_info <- tribble(
   "ACT", "2021-10-11", 28,
   "ACT", "2021-10-12", 51,
   "ACT", "2021-10-13", 46,
+  "ACT", "2021-10-14", 35,
 ) %>%
   mutate(date = ymd(date))
 ```
