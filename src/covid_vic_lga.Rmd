@@ -512,7 +512,7 @@ melb_lga %>%
             ymin = -Inf, ymax = Inf) +
   facet_geo(vars(lga), grid = melb_grid) +
   scale_x_date(date_labels = "%e %b",
-               breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01")),
+               breaks = ymd(c("2021-09-01", "2021-09-15", "2021-10-01", "2021-10-15")),
                limits = c(min(melb_lga$date) - 2, max(melb_lga$date) + 2),
                expand = expansion(0)) +
   scale_fill_stepsn(#breaks = seq(0.4, 0.95, by = 0.05),
@@ -549,7 +549,7 @@ ggsave(plot_file("cases_melb_lga_pop_vax_2.png"),
 
 ```{r}
 syd_lga <- nsw_lga %>%
-  filter(date >= "2021-08-01") %>%
+  filter(date >= "2021-09-01") %>%
   filter(lga %in% syd_grid$name)
 stopifnot(length(unique(syd_lga$lga)) == nrow(filter(syd_grid, !str_detect(name, "^ocean"))))
 ```
