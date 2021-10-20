@@ -71,10 +71,10 @@ Vaccination data from: <https://www.health.gov.au/resources/collections/covid-19
 LGA population data from: <https://www.planning.vic.gov.au/land-use-and-population-research/victoria-in-future>
 
 ```{r}
-cases_file_date <- ymd("2021-10-18")
+cases_file_date <- ymd("2021-10-20")
 #cases_file_date <- Sys.Date()
 
-cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}%20(1).csv")
+cases_file_name <- glue("NCOV_COVID_Cases_by_LGA_Source_{strftime(cases_file_date, '%Y%m%d')}_0.csv")
 cases_file_path <- here("data", "cases_LGA", cases_file_name)
 cases_file_url <- glue("https://www.dhhs.vic.gov.au/sites/default/files/documents/{strftime(cases_file_date, '%Y%m')}/{cases_file_name}")
 if (fs::file_exists(cases_file_path)) {
